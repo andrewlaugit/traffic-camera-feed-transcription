@@ -5,9 +5,17 @@ from os import path
 import time
 
 
-videopath = r"C:\Users\Bob\Videos\Project_1.avi" #####Video Source
+# def image_extraction(video_path, image_per_second = 5, target_height = 128, target_width = 256):
 
-video = VideoCapture(videopath)
+video_path = r"C:\Users\Bob\Videos\Project_1.avi" #####Video Source
+
+video = VideoCapture(video_path)
+
+temp, video_name = os.path.split(video_path)
+
+video_name = video_name.split(".")
+
+print(video_name[0])
 
 total_video_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
 frame_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -33,9 +41,6 @@ image_per_second = 5 ######Number of frames extracted per second
 target_height = 128
 target_width = 256
 
-scale_height = target_height/frame_height
-scale_width = target_width/frame_width
-
 scale = (target_width, target_height)
 
 save_interval = video_fps / image_per_second
@@ -46,14 +51,13 @@ while(frame_count < total_video_frames):
     
     valid, image = video.read()
 
-    image = resize(image, scale)
-
     if not valid:
         print("END")
         break
 
     if(valid and frame_count % save_interval == 0):
-        image_name = image_path + r"\test_frame" + str(frame_count) +r".jpg"
+        image = resize(image, scale)
+        image_name = image_path + "\\" + video_name[0] + "_frame_" + str(frame_count) +r".jpg"
         imwrite(image_name, image)
 
     frame_count += 1
