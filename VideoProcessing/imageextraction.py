@@ -76,7 +76,7 @@ def video_details(video_path):
 """
 Extracts frames from the video at a selected frame rate
 """
-def image_extraction(video_path = None, image_per_second = 5, target_height = 128, target_width = 256):
+def image_extraction(video_path = None, image_per_second = 10, target_height = 128, target_width = 256):
     """
     Checks validity of provided video file path
     """
@@ -109,7 +109,13 @@ def image_extraction(video_path = None, image_per_second = 5, target_height = 12
     if not path.isdir(current_path + r"\images"):
         os.mkdir(current_path + r"\images")
 
-    image_path = current_path + r"\images"
+    image_path = current_path + r"\images\\" + video_name[0]
+
+    if not path.isdir(image_path):
+        os.mkdir(image_path)    
+
+    print(image_path)
+
 
     begin = time.time()
 
