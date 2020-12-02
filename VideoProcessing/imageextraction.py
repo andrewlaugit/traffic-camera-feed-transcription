@@ -21,6 +21,7 @@ def get_video_youtube(url):
 
     """
     Gets youtube object, identifies the smallest stream and downloads it
+    smallest stream is selected as our model is being trained on low resolution images and this saves space
     """
     youtube_object = YouTube(url)
     video_path = youtube_object.streams.filter(progressive=True, file_extension='mp4').get_lowest_resolution().download(save_path)
