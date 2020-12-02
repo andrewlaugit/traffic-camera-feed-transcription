@@ -1,4 +1,4 @@
-from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS
+from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread
 import os
 from os import path
 import time
@@ -136,7 +136,7 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 1
 
         if(valid and frame_count % save_interval == 0):
             image = resize(image, scale)
-            image_name = image_path + "\\" + video_name[0] + "_frame_" + str(frame_count) +r".jpg"
+            image_name = image_path + "\\" + video_name[0] + "_frame_{:08d}.jpg".format(frame_count)
             imwrite(image_name, image)
 
         frame_count += 1
@@ -148,13 +148,53 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 1
     video.release()
 
     print(total_time)
+    return image_path
+
+"""
+Generates video from images in given file
+"""
+def make_video(image_path, size, fps):
+    
+    current_path = os.getcwd()
+
+    images = []
+    names = []
+
+    for image in os.listdir(image_path):
+        names.append(image)
+        img = imread(os.path.join(image_path, image))
+        images.append(img)
+
+    out = [x for _, x in sorted(zip(names,images))]
+
+    if not path.isdir(current_path + r"\generatedvideos"):
+        os.mkdir(current_path + r"\generatedvideos")
+
+    name = image_path.split("\\")
+    print(name[len(name)-1])
+
+    video_path = current_path + r"\generatedvideos\\" + name[len(name)-1] + r".avi"
+
+    codex = VideoWriter_fourcc(*'MP4V')
+    writer = VideoWriter(video_path, codex, fps, (size[1],size[0]))
+
+    for image in out:
+        # cv2_imshow(image)
+        writer.write(image)
+    writer.release()
+
+    return video_path
 
 
 def main():
     # video_path = r"C:\Users\Bob\Videos\Project_1.avi"
 
+    size = (128,256)
+    fps = 10
+
     video_path = get_video_youtube("https://www.youtube.com/watch?v=MNn9qKG2UFI&ab_channel=KarolMajek")
-    image_extraction(video_path)
+    image_path = image_extraction(video_path, fps, size[0], size[1])
+    gen_video_path = make_video(image_path, size, fps)
 
 if __name__ == '__main__':
     main()
