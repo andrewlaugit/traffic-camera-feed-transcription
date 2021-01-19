@@ -178,7 +178,7 @@ def main():
         print('wrote image #{} to {}'.format(num_masks_created, mask_img_filepath) , end='\t\t\t\r')
 
     f_data.close()
-    print('Added {} mask images to mask folder'.format(num_masks_created))
+    print('\nAdded {} mask images to mask folder'.format(num_masks_created))
     print('Total of {} non-car vehicles in this dataset'.format(non_cars_added))
 
 if __name__ == '__main__':
