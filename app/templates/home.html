@@ -17,14 +17,18 @@
         <ul>
             {% for video in video_list %}
                 <li><a href='{{ url_for("run_model", file_name=video)}}'>{{ video }}</a></li>
+                <h1><a href='{{ url_for("play_video", file_name=video)}}'>Play Video</a></h1>
             {% endfor %}
         </ul>
         <h1>Analysed Video Available for Download</h1>
         <ul>
             {% for video in video_download_list %}
-                <li><a href='{{ url_for("download_file", file_name=video)}}'>{{ video }}</a></li>
+                <li><a href='{{ url_for("download_file", file_name=video)}}'>{{ video }}</a>
+
+                </li>
             {% endfor %}
         </ul>
+
     </body>
 
 {% endblock %}

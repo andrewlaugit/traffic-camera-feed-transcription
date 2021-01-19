@@ -9,8 +9,9 @@ def home():
     uploaded_videos = []
     download_videos = []
     print(Path.cwd())
-    current_path = Path.cwd() / "app" / "videos"
+    current_path = Path.cwd() / "app" / "static" #/ "videos"
     folder_path = current_path.iterdir()
+    get_stream("test")
 
 
     for file in folder_path:
@@ -18,7 +19,7 @@ def home():
             uploaded_videos.append(file.name)
 
 
-    current_path = Path.cwd() / "app" / "generatedvideos"
+    current_path = Path.cwd() / "app" / "static" #/ "generatedvideos"
     folder_path = current_path.iterdir()
 
     for file in folder_path:
@@ -40,8 +41,8 @@ def upload():
 
     current_path = Path.cwd()
     current_path = Path(current_path)
-    file_path = current_path / "app" / "videos" / file_name
-    file.save(file_path)
+    file_path = current_path / "app" / "static" / "videos" / file_name
+    file.save(file_path.__str__())
     # image_extraction(file_path.__str__())
     return home()
 
@@ -53,9 +54,17 @@ def run_model(file_name):
 
 @app.route('/downloadfile/<file_name>')
 def download_file(file_name):
-    current_path = Path.cwd() / "app" / "generatedvideos"
+    current_path = Path.cwd() / "app" / "static" / "generatedvideos"
     file_path = current_path / file_name
     return send_file(file_path.__str__(), as_attachment=True)
+
+@app.route('/playvideo/<file_name>')
+def play_video(file_name):
+    # current_path = Path.cwd() / "app" / "static"
+    # file_path = current_path / file_name
+    # print(file_path)
+    # file_name = "videos" / Path(file_name)
+    return render_template("play_video.html", file_name = file_name)
 
 if __name__ == '__main__':
     app.run(debug=True)

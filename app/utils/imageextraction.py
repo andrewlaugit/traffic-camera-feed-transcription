@@ -1,8 +1,12 @@
 from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread
 import os
 from os import path
+from pathlib import Path
 import time
 from pytube import YouTube, Stream
+import requests
+import m3u8
+from urllib.parse import urlparse
 
 
 """
@@ -52,7 +56,7 @@ Get and reutrns the details for the video pointed to by the file path
 """
 def video_details(video_path):
     check_file_path(video_path)
-    print(type(video_path))
+    # print(type(video_path))
     video = VideoCapture(video_path)
 
     if not video.isOpened():
@@ -64,11 +68,11 @@ def video_details(video_path):
     frame_width = video.get(CAP_PROP_FRAME_WIDTH)
     video_fps = video.get(CAP_PROP_FPS)
     video_length = total_video_frames / video_fps
-    print(total_video_frames)
-    print(frame_height)
-    print(frame_width)
-    print(video_fps)  
-    print(video_length)
+    print("Total Number of Frames: ", total_video_frames)
+    print("Frame Height: ", frame_height)
+    print("Frame Width: ", frame_width)
+    print("Frames per Second: ", video_fps)  
+    print("Video Length: ", video_length)
 
     video.release()
 
@@ -222,15 +226,72 @@ def run_model_on_file(image_path):
 
     print(total_time)
 
-def main():
-    # video_path = r"C:\Users\Bob\Videos\Project_1.avi"
+def get_stream(url):
+    # url = "https://33-d6.divas.cloud/CHAN-4859/CHAN-4859_1.stream/chunklist_w418794003.m3u8"
+    url = "https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8"
+    urltemp = url.split("/")
+    base_url = ""
+    for i in range(len(urltemp)-1):
+        base_url = base_url + urltemp[i] + "/"
 
-    size = (128,256)
-    fps = 10
+    # print(base_url)
 
-    video_path = get_video_youtube("https://www.youtube.com/watch?v=MNn9qKG2UFI&ab_channel=KarolMajek")
-    image_path = image_extraction(video_path, fps, size[0], size[1])
-    gen_video_path = make_video(image_path, size, fps)
+    # m3u8_segments = m3u8.load("https://33-d6.divas.cloud/CHAN-4859/CHAN-4859_1.stream/chunklist_w418794003.m3u8")
+    m3u8_segments = m3u8.load("https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8")
 
-if __name__ == '__main__':
-    main()
+    ts_segments = []
+
+    for items in m3u8_segments.data['segments']:
+        ts_segments.append(base_url + items['uri'])
+
+    print(ts_segments)
+
+    print ("Recording video...")
+
+    print(m3u8_segments.target_duration)
+
+    save_path = Path.cwd() / "app" / "static" / "stream"
+
+    print(save_path)
+    i = -1
+    for url in ts_segments:
+        print(url)
+        num=0
+        i = i + 1
+        print("i = ", i)
+        r1 = requests.get(url, stream=True)
+        if(r1.status_code == 200):
+            # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
+            file_save_path = save_path.__str__() + ".mp4" 
+            with open(file_save_path,'ab') as f:
+                for chunk in r1.iter_content(chunk_size=1024):
+                    num += 1
+                    f.write(chunk)
+                    if num>5000:
+                        print('end')
+                        break
+                print("here")
+
+        else:
+            print("Received unexpected status code {}".format(r1.status_code))
+        
+    f.close()
+    image_extraction(file_save_path)
+
+    # video_details(save_path.__str__())
+
+    # print(total_video_frames)
+
+
+# def main():
+#     # video_path = r"C:\Users\Bob\Videos\Project_1.avi"
+
+#     size = (128,256)
+#     fps = 10
+
+#     video_path = get_video_youtube("https://www.youtube.com/watch?v=MNn9qKG2UFI&ab_channel=KarolMajek")
+#     image_path = image_extraction(video_path, fps, size[0], size[1])
+#     gen_video_path = make_video(image_path, size, fps)
+
+# if __name__ == '__main__':
+#     main()
