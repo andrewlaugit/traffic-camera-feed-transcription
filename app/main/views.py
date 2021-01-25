@@ -1,23 +1,24 @@
-from flask import render_template, request, flash, redirect, send_file
+from flask import render_template, request, flash, redirect, send_file, request
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
 from app.utils.imageextraction import *
 
+
 @app.route('/')
 def home():
+    return render_template("home.html")
+
+@app.route('/uploaded_file')
+def uploaded_file():
     uploaded_videos = []
     download_videos = []
-    print(Path.cwd())
     current_path = Path.cwd() / "app" / "static" #/ "videos"
     folder_path = current_path.iterdir()
-    get_stream("test")
-
 
     for file in folder_path:
         if file.is_file():
             uploaded_videos.append(file.name)
-
 
     current_path = Path.cwd() / "app" / "static" #/ "generatedvideos"
     folder_path = current_path.iterdir()
@@ -26,7 +27,7 @@ def home():
         if file.is_file():
             download_videos.append(file.name)
     
-    return render_template("home.html", video_list=uploaded_videos, video_download_list=download_videos)
+    return render_template("uploaded_file.html", video_list=uploaded_videos, video_download_list=download_videos)
 
 @app.route('/upload', methods=["POST"])
 def upload():
@@ -46,11 +47,29 @@ def upload():
     # image_extraction(file_path.__str__())
     return home()
 
+@app.route('/livestream', methods=["GET", "POST"])
+def live_stream():
+    if(request.method == "POST"):
+        url = request.form['url']
+        get_stream(url)
+        return home()
+    else:    
+        return render_template("live_stream.html")
+
 @app.route('/runmodel/<file_name>')
 def run_model(file_name):
     image_path = image_extraction(file_name)
     print(image_path)
     return home()
+
+@app.route('/youtube_video')
+def youtube_video():
+    if(request.method == "POST"):
+        url = request.form['url']
+        get_video_youtube(url)
+        return home()
+    else:  
+        return render_template("youtube_video.html")
 
 @app.route('/downloadfile/<file_name>')
 def download_file(file_name):

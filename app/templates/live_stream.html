@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <head>
+        <title>Traffic Flow Analysis</title>
+    </head>
+    <body>
+        <h1>Select Source For Video</h1>
+        <form action="/livestream" method="POST">
+            <input type="url" name="url" placeholder=".m3u8 URL">
+            <input type="submit" name="submit" value="Analyse Video">
+        </form>
+
+        <h1>Some Sources for Video Feeds</h1>
+        <a href="https://cwwp2.dot.ca.gov/vm/streamlist.htm">Caltrans :: Live Traffic Cameras - Individual Links</a>
+        <a href="https://fl511.com/">Florida 511</a>      
+    </body>
+
+
+
+{% endblock %}

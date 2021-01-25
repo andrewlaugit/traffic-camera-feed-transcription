@@ -13,23 +13,22 @@ from urllib.parse import urlparse
 Retrieves video from youtube in smallest mp4 format available and saves it to videos folder in working directory
 """
 def get_video_youtube(url):
-
-    current_path = os.getcwd()
-
     """
     ensures video folder exists in project root directory
     """
-    if not path.isdir(current_path + r"\videos"):
-        os.mkdir(current_path + r"\videos")
 
-    save_path = current_path + r"\videos"
+    save_path = Path.cwd() / "app" / "static" 
+    # save_path = current_path + r"\videos"
+    
+    if not path.isdir(save_path):
+        os.mkdir(save_path)
 
     """
     Gets youtube object, identifies the smallest stream and downloads it
     smallest stream is selected as our model is being trained on low resolution images and this saves space
     """
     youtube_object = YouTube(url)
-    video_path = youtube_object.streams.filter(progressive=True, file_extension='mp4').get_lowest_resolution().download(save_path)
+    video_path = youtube_object.streams.filter(progressive=True, file_extension='mp4').get_lowest_resolution().download(save_path.__str__())
 
     return video_path
 
@@ -227,8 +226,9 @@ def run_model_on_file(image_path):
     print(total_time)
 
 def get_stream(url):
+    # url = "https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/1611463818/ei/KqgMYMn7B4Oqkgb5-awo/ip/69.172.154.204/id/O161GF52aKU.1/itag/301/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D299/hls_chunk_host/r2---sn-ux3n588t-t8ge.googlevideo.com/playlist_duration/30/manifest_duration/30/vprv/1/playlist_type/DVR/initcwndbps/8230/mh/1c/mm/44/mn/sn-ux3n588t-t8ge/ms/lva/mv/m/mvi/2/pl/20/dover/11/keepalive/yes/mt/1611441857/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,playlist_duration,manifest_duration,vprv,playlist_type/sig/AOq0QJ8wRAIgC0MZa5xwnAJOnwifvfnbET0GcEaCiLpY9oueKDgzm-8CIDDC2waWjsVwj6V278XlK35oedyqPg3K5fn5hMl_XjMi/lsparams/hls_chunk_host,initcwndbps,mh,mm,mn,ms,mv,mvi,pl/lsig/AG3C_xAwRQIhAPgh1jUGt0AEWVUClGv2c2CmMnuWZ4CNlm2ojMnBP-TqAiA5CWErMunIuOIWOGJVUUl5bsqvVfkc6b4ww8o6r-RMLw%3D%3D/playlist/index.m3u8"
     # url = "https://33-d6.divas.cloud/CHAN-4859/CHAN-4859_1.stream/chunklist_w418794003.m3u8"
-    url = "https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8"
+    # url = "https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8"
     urltemp = url.split("/")
     base_url = ""
     for i in range(len(urltemp)-1):
@@ -236,10 +236,13 @@ def get_stream(url):
 
     # print(base_url)
 
-    # m3u8_segments = m3u8.load("https://33-d6.divas.cloud/CHAN-4859/CHAN-4859_1.stream/chunklist_w418794003.m3u8")
-    m3u8_segments = m3u8.load("https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8")
+    m3u8_segments = m3u8.load(url)
+    # m3u8_segments = m3u8.load("https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8")
 
     ts_segments = []
+    length = 0
+
+    # while(length < 60):
 
     for items in m3u8_segments.data['segments']:
         ts_segments.append(base_url + items['uri'])
@@ -248,9 +251,9 @@ def get_stream(url):
 
     print ("Recording video...")
 
-    print(m3u8_segments.target_duration)
+    print("m3u8 Duration", m3u8_segments.target_duration)
 
-    save_path = Path.cwd() / "app" / "static" / "stream"
+    save_path = Path.cwd() / "app" / "static" / urltemp[-2]
 
     print(save_path)
     i = -1
@@ -259,24 +262,27 @@ def get_stream(url):
         num=0
         i = i + 1
         print("i = ", i)
-        r1 = requests.get(url, stream=True)
-        if(r1.status_code == 200):
+        request = requests.get(url, stream=True)
+        if(request.status_code == 200):
             # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
             file_save_path = save_path.__str__() + ".mp4" 
-            with open(file_save_path,'ab') as f:
-                for chunk in r1.iter_content(chunk_size=1024):
+            with open(file_save_path,'ab') as file:
+                for chunk in request.iter_content(chunk_size=1024):
                     num += 1
-                    f.write(chunk)
+                    print(num)
+                    file.write(chunk)
                     if num>5000:
                         print('end')
                         break
                 print("here")
 
         else:
-            print("Received unexpected status code {}".format(r1.status_code))
+            print("Received unexpected status code {}".format(request.status_code))
         
-    f.close()
-    image_extraction(file_save_path)
+        _,_,_,_, length = video_details(file_save_path)
+        
+    # file.close()
+    # image_extraction(file_save_path)
 
     # video_details(save_path.__str__())
 

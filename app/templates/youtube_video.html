@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <head>
+        <title>Traffic Flow Analysis</title>
+    </head>
+    <body>
+        <h1>Select Source For Video</h1>
+        <form action="/youtube_video" method="POST">
+            <input type="url" name="url" placeholder="Youtube URL">
+            <input type="submit" value="Analyse Video">
+        </form>
+    </body>
+
+{% endblock %}
