@@ -253,7 +253,13 @@ def get_stream(url):
 
     print("m3u8 Duration", m3u8_segments.target_duration)
 
-    save_path = Path.cwd() / "app" / "static" / urltemp[-2]
+    current_time = time.localtime()
+
+    file_name_temp = urltemp[-2].split(".")
+
+    file_name = file_name_temp[0] + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", current_time))
+
+    save_path = Path.cwd() / "app" / "static" / file_name
 
     print(save_path)
     i = -1
@@ -281,7 +287,7 @@ def get_stream(url):
         
         _,_,_,_, length = video_details(file_save_path)
         
-    # file.close()
+    file.close()
     # image_extraction(file_save_path)
 
     # video_details(save_path.__str__())
