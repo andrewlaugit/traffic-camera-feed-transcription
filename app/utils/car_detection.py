@@ -167,7 +167,7 @@ def load_saved_model():
 
     models_filepath = Path.cwd() / model_save_name
 
-    model.load_state_dict(torch.load(models_filepath.__str__()))
+    model.load_state_dict(torch.load(models_filepath, map_location=torch.device('cpu')))
     model.eval()
     return model
 

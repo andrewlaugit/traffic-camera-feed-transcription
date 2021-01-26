@@ -7,6 +7,7 @@ from pytube import YouTube, Stream
 import requests
 import m3u8
 from urllib.parse import urlparse
+from app.utils.car_detection import *
 
 
 """
@@ -81,7 +82,7 @@ def video_details(video_path):
 """
 Extracts frames from the video at a selected frame rate
 """
-def image_extraction(video_path = None, image_per_second = 10, target_height = 128, target_width = 256):
+def image_extraction(video_path = None, image_per_second = 10, target_height = 128, target_width = 256, frame_count = 0):
     """
     Checks validity of provided video file path
     """
@@ -128,18 +129,19 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 1
     iterates through loaded video and extracts frames
     at intervals dictated by save_interal 
     """
-    frame_count = 0
+    
     scale = (target_width, target_height)
-    save_interval = int(video_fps / image_per_second)
+    # save_interval = int(video_fps / image_per_second)
     while(frame_count < total_video_frames):
         
         valid, image = video.read()
 
         if not valid:
-            print("END")
+            # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
             break
 
-        if(valid and frame_count % save_interval == 0):
+        # if(valid and frame_count % save_interval == 0):
+        if(valid):
             image = resize(image, scale)
             image_name = image_path + "\\" + video_name[0] + "_frame_{:08d}.jpg".format(frame_count)
             imwrite(image_name, image)
@@ -153,7 +155,7 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 1
     video.release()
 
     print(total_time)
-    return image_path
+    return image_path, frame_count
 
 """
 Generates video from images in given file
@@ -192,14 +194,14 @@ def make_video(image_path, size, fps):
 
 
 
-def run_model_on_file(image_path):
+def run_model_on_file(model, image_path, target_height = 128, target_width = 256, start_frame = 0):
 
     current_path = os.getcwd()
 
     if not path.isdir(current_path + r"/processed_images"):
         os.mkdir(current_path + r"/processed_images")
 
-    video_name = image_path.split("/")
+    video_name = image_path.split("\\")
 
     processed_path = current_path + r"/processed_images/" + video_name[-1]
 
@@ -208,11 +210,11 @@ def run_model_on_file(image_path):
 
     begin = time.time()
 
-    image_transforms = transforms.Compose([transforms.Resize((size[0], size[1])), transforms.ToTensor()])
+    image_transforms = transforms.Compose([transforms.Resize((target_height, target_width)), transforms.ToTensor()])
     for image in os.listdir(image_path):
         img = Image.open(image_path + "/" + image)
         t_image = image_transforms(img)
-        img_out = draw_bounding_boxes_on_image(t_image)
+        img_out = draw_bounding_boxes_on_image(model, t_image)
         img_out = cv2.cvtColor(img_out*255,cv2.COLOR_RGB2BGR)
         out_path = processed_path + "/Processed_" + image
         imwrite(out_path, img_out)
@@ -243,11 +245,11 @@ def get_stream(url, target_length = 20):
 
     file_name_temp = urltemp[-2].split(".")
 
-    file_name = file_name_temp[0] + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", current_time))
 
-    save_path = Path.cwd() / "app" / "static" / file_name
 
     temp_url = ""
+
+    frame_count = 0
 
     while(length<target_length):
         segment_url = get_segment(url)
@@ -258,24 +260,33 @@ def get_stream(url, target_length = 20):
             request = requests.get(segment_url, stream=True)
             if(request.status_code == 200):
                 # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
+                file_name = file_name_temp[0] # + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", current_time))
+
+                save_path = Path.cwd() / "app" / "static" / file_name
                 file_save_path = save_path.__str__() + ".mp4" 
-                with open(file_save_path,'ab') as file:
+                print(file_save_path)
+                with open(file_save_path,'wb') as file:
                     for chunk in request.iter_content(chunk_size=1024):
                         chunk_count += 1
-                        print(chunk_count)
+                        # print(chunk_count)
                         file.write(chunk)
                         if chunk_count>1000:
                             print('File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
                             break
                     print("here")
-
+                file.close()
+                _, frame_count = image_extraction(file_save_path, frame_count=frame_count)
+                print("Frame Count =", frame_count)
+                _,_,_,_, seg_length = video_details(file_save_path)
+                length = length + seg_length
             else:
                 print("ERROR", request.status_code)
         temp_url = segment_url
         
-        _,_,_,_, length = video_details(file_save_path)
         
-    file.close()
+        print("Frame Count =", frame_count)
+        
+    
     # image_extraction(file_save_path)
 
     # print(total_video_frames)

@@ -3,10 +3,14 @@ from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
 from app.utils.imageextraction import *
+from app.utils.car_detection import *
+
+
 
 
 @app.route('/')
 def home():
+    
     return render_template("home.html")
 
 @app.route('/uploaded_file')
@@ -42,7 +46,7 @@ def upload():
 
     current_path = Path.cwd()
     current_path = Path(current_path)
-    file_path = current_path / "app" / "static" / "videos" / file_name
+    file_path = current_path / "app" / "static" / file_name
     file.save(file_path.__str__())
     # image_extraction(file_path.__str__())
     return home()
@@ -58,15 +62,23 @@ def live_stream():
 
 @app.route('/runmodel/<file_name>')
 def run_model(file_name):
-    image_path = image_extraction(file_name)
+    video_path = Path.cwd() / "app" / "static" / file_name
+    image_path, _ = image_extraction(video_path.__str__())
+    model = load_saved_model()
+    run_model_on_file(model, image_path)
+
     print(image_path)
     return home()
 
-@app.route('/youtube_video')
+@app.route('/youtube_video', methods=["GET", "POST"])
 def youtube_video():
     if(request.method == "POST"):
         url = request.form['url']
-        get_video_youtube(url)
+        print(url)
+        video_path = Path(get_video_youtube(url))
+        image_path, _ = image_extraction(video_path.__str__())
+        model = load_saved_model()
+        run_model_on_file(model, image_path)
         return home()
     else:  
         return render_template("youtube_video.html")

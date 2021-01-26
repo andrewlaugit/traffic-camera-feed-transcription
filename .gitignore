@@ -138,3 +138,6 @@ dmypy.json
 .vscode/settings.json
 .vscode/*
 vscode/
+
+processed_images/
+images/
