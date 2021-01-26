@@ -225,33 +225,19 @@ def run_model_on_file(image_path):
 
     print(total_time)
 
-def get_stream(url):
-    # url = "https://manifest.googlevideo.com/api/manifest/hls_playlist/expire/1611463818/ei/KqgMYMn7B4Oqkgb5-awo/ip/69.172.154.204/id/O161GF52aKU.1/itag/301/source/yt_live_broadcast/requiressl/yes/ratebypass/yes/live/1/sgoap/gir%3Dyes%3Bitag%3D140/sgovp/gir%3Dyes%3Bitag%3D299/hls_chunk_host/r2---sn-ux3n588t-t8ge.googlevideo.com/playlist_duration/30/manifest_duration/30/vprv/1/playlist_type/DVR/initcwndbps/8230/mh/1c/mm/44/mn/sn-ux3n588t-t8ge/ms/lva/mv/m/mvi/2/pl/20/dover/11/keepalive/yes/mt/1611441857/sparams/expire,ei,ip,id,itag,source,requiressl,ratebypass,live,sgoap,sgovp,playlist_duration,manifest_duration,vprv,playlist_type/sig/AOq0QJ8wRAIgC0MZa5xwnAJOnwifvfnbET0GcEaCiLpY9oueKDgzm-8CIDDC2waWjsVwj6V278XlK35oedyqPg3K5fn5hMl_XjMi/lsparams/hls_chunk_host,initcwndbps,mh,mm,mn,ms,mv,mvi,pl/lsig/AG3C_xAwRQIhAPgh1jUGt0AEWVUClGv2c2CmMnuWZ4CNlm2ojMnBP-TqAiA5CWErMunIuOIWOGJVUUl5bsqvVfkc6b4ww8o6r-RMLw%3D%3D/playlist/index.m3u8"
-    # url = "https://33-d6.divas.cloud/CHAN-4859/CHAN-4859_1.stream/chunklist_w418794003.m3u8"
-    # url = "https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8"
+
+def get_segment(url):
+    m3u8_segments = m3u8.load(url)
+    segment = m3u8_segments.data["segments"][0]['uri']
+    return segment
+
+def get_stream(url, target_length = 20):
     urltemp = url.split("/")
     base_url = ""
     for i in range(len(urltemp)-1):
         base_url = base_url + urltemp[i] + "/"
 
-    # print(base_url)
-
-    m3u8_segments = m3u8.load(url)
-    # m3u8_segments = m3u8.load("https://wzmedia.dot.ca.gov/D4/E80_EOF_American_Canyon_Rd.stream/chunklist_w213026165.m3u8")
-
-    ts_segments = []
     length = 0
-
-    # while(length < 60):
-
-    for items in m3u8_segments.data['segments']:
-        ts_segments.append(base_url + items['uri'])
-
-    print(ts_segments)
-
-    print ("Recording video...")
-
-    print("m3u8 Duration", m3u8_segments.target_duration)
 
     current_time = time.localtime()
 
@@ -261,49 +247,35 @@ def get_stream(url):
 
     save_path = Path.cwd() / "app" / "static" / file_name
 
-    print(save_path)
-    i = -1
-    for url in ts_segments:
-        print(url)
-        num=0
-        i = i + 1
-        print("i = ", i)
-        request = requests.get(url, stream=True)
-        if(request.status_code == 200):
-            # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
-            file_save_path = save_path.__str__() + ".mp4" 
-            with open(file_save_path,'ab') as file:
-                for chunk in request.iter_content(chunk_size=1024):
-                    num += 1
-                    print(num)
-                    file.write(chunk)
-                    if num>5000:
-                        print('end')
-                        break
-                print("here")
+    temp_url = ""
 
-        else:
-            print("Received unexpected status code {}".format(request.status_code))
+    while(length<target_length):
+        segment_url = get_segment(url)
+        segment_url = base_url + segment_url
+
+        if(segment_url != temp_url):
+            chunk_count=0
+            request = requests.get(segment_url, stream=True)
+            if(request.status_code == 200):
+                # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
+                file_save_path = save_path.__str__() + ".mp4" 
+                with open(file_save_path,'ab') as file:
+                    for chunk in request.iter_content(chunk_size=1024):
+                        chunk_count += 1
+                        print(chunk_count)
+                        file.write(chunk)
+                        if chunk_count>1000:
+                            print('File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
+                            break
+                    print("here")
+
+            else:
+                print("ERROR", request.status_code)
+        temp_url = segment_url
         
         _,_,_,_, length = video_details(file_save_path)
         
     file.close()
     # image_extraction(file_save_path)
 
-    # video_details(save_path.__str__())
-
     # print(total_video_frames)
-
-
-# def main():
-#     # video_path = r"C:\Users\Bob\Videos\Project_1.avi"
-
-#     size = (128,256)
-#     fps = 10
-
-#     video_path = get_video_youtube("https://www.youtube.com/watch?v=MNn9qKG2UFI&ab_channel=KarolMajek")
-#     image_path = image_extraction(video_path, fps, size[0], size[1])
-#     gen_video_path = make_video(image_path, size, fps)
-
-# if __name__ == '__main__':
-#     main()
