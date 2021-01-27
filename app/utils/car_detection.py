@@ -28,12 +28,14 @@ from pathlib import Path
 """
 convert mask to binary mask using threshold
 """
-def apply_binary_image_thresholding(mask, threshold=0.5, cuda_allow=False):
+def apply_binary_image_thresholding(mask, threshold=0.5, cuda_allow=True):
     if mask.is_cuda:
+        # print("CUDA ON")
         ones_array = torch.ones(mask.shape, device=torch.device('cuda:0'))
         zeros_array = torch.zeros(mask.shape, device=torch.device('cuda:0'))
         threshold_array = ones_array * threshold
     else:
+        # print("CUDA OFF")
         ones_array = torch.ones(mask.shape)
         zeros_array = torch.zeros(mask.shape)
         threshold_array = ones_array * threshold
@@ -167,7 +169,9 @@ def load_saved_model():
 
     models_filepath = Path.cwd() / model_save_name
 
-    model.load_state_dict(torch.load(models_filepath, map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load(models_filepath))
+    if (torch.cuda.is_available()):
+        model.cuda()
     model.eval()
     return model
 

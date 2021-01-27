@@ -82,7 +82,7 @@ def video_details(video_path):
 """
 Extracts frames from the video at a selected frame rate
 """
-def image_extraction(video_path = None, image_per_second = 10, target_height = 128, target_width = 256, frame_count = 0):
+def image_extraction(video_path = None, image_per_second = 10, target_height = 256, target_width = 512, frame_count = 0):
     """
     Checks validity of provided video file path
     """
@@ -194,7 +194,7 @@ def make_video(image_path, size, fps):
 
 
 
-def run_model_on_file(model, image_path, target_height = 128, target_width = 256, start_frame = 0):
+def run_model_on_file(model, image_path, target_height = 256, target_width = 512, start_frame = 0):
 
     current_path = os.getcwd()
 
@@ -219,7 +219,7 @@ def run_model_on_file(model, image_path, target_height = 128, target_width = 256
         out_path = processed_path + "/Processed_" + image
         imwrite(out_path, img_out)
 
-    make_video(processed_path, size, fps)
+    # make_video(processed_path, size, fps)
 
     end = time.time()
 
@@ -245,11 +245,10 @@ def get_stream(url, target_length = 20):
 
     file_name_temp = urltemp[-2].split(".")
 
-
-
     temp_url = ""
 
     frame_count = 0
+    model = load_saved_model()
 
     while(length<target_length):
         segment_url = get_segment(url)
@@ -260,7 +259,7 @@ def get_stream(url, target_length = 20):
             request = requests.get(segment_url, stream=True)
             if(request.status_code == 200):
                 # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
-                file_name = file_name_temp[0] # + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", current_time))
+                file_name = file_name_temp[0] + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", time.localtime()))
 
                 save_path = Path.cwd() / "app" / "static" / file_name
                 file_save_path = save_path.__str__() + ".mp4" 
@@ -275,7 +274,8 @@ def get_stream(url, target_length = 20):
                             break
                     print("here")
                 file.close()
-                _, frame_count = image_extraction(file_save_path, frame_count=frame_count)
+                image_path, frame_count = image_extraction(file_save_path, frame_count=frame_count)
+                run_model_on_file(model, image_path)
                 print("Frame Count =", frame_count)
                 _,_,_,_, seg_length = video_details(file_save_path)
                 length = length + seg_length
