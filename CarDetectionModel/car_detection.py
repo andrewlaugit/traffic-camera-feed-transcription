@@ -4,23 +4,23 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from torch.utils import data
+from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
 import torchvision
 import torchvision.transforms as transforms
+import torchvision.transforms.functional as TF
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image
+from PIL import ImageEnhance
 import cv2
 
 import os
 import glob
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
 import random
-import torchvision.transforms.functional as TF
 from sklearn.utils import shuffle
 
 from pathlib import Path
@@ -104,27 +104,31 @@ class TrafficCamera_Vgg(nn.Module):
 
     self.deconv1 = nn.ConvTranspose2d(512, 512, 3, stride=2, padding=1, output_padding=1)
     self.deconv_bn_layer1 = nn.BatchNorm2d(512)
-    self.deconv_dropout1 = nn.Dropout(p=0.5)
+    self.deconv_dropout1 = nn.Dropout(p=0.52)
 
     self.deconv2 = nn.ConvTranspose2d(512+512, 256, 3, stride=2, padding=1, output_padding=1)
     self.deconv_bn_layer2 = nn.BatchNorm2d(256)
-    self.deconv_dropout2 = nn.Dropout(p=0.5)
+    self.deconv_dropout2 = nn.Dropout(p=0.50)
 
     self.deconv3 = nn.ConvTranspose2d(256+256, 128, 3, stride=2, padding=1, output_padding=1)
     self.deconv_bn_layer3 = nn.BatchNorm2d(128)
-    self.deconv_dropout3 = nn.Dropout(p=0.5)
+    self.deconv_dropout3 = nn.Dropout(p=0.48)
 
     self.deconv4 = nn.ConvTranspose2d(128+128, 64, 3, stride=2, padding=1, output_padding=1)
     self.deconv_bn_layer4 = nn.BatchNorm2d(64)
-    self.deconv_dropout4 = nn.Dropout(p=0.5)
+    self.deconv_dropout4 = nn.Dropout(p=0.46)
 
-    self.deconv5 = nn.ConvTranspose2d(64+64, 3, 3, stride=2, padding=1, output_padding=1)
-    self.deconv_bn_layer5 = nn.BatchNorm2d(3)
-    self.deconv_dropout5 = nn.Dropout(p=0.5)
+    self.deconv5 = nn.ConvTranspose2d(64+64, 64, 3, stride=2, padding=1, output_padding=1)
+    self.deconv_bn_layer5 = nn.BatchNorm2d(64)
+    self.deconv_dropout5 = nn.Dropout(p=0.44)
 
-    self.deconv6 = nn.ConvTranspose2d(3+3, 1, 3, stride=1, padding=1)
-    self.deconv_bn_layer6 = nn.BatchNorm2d(1)
-    self.deconv_dropout6 = nn.Dropout(p=0.5)
+    self.deconv6 = nn.ConvTranspose2d(64, 3, 3, stride=1, padding=1) #, output_padding=1)
+    self.deconv_bn_layer6 = nn.BatchNorm2d(3)
+    self.deconv_dropout6 = nn.Dropout(p=0.42)
+
+    self.deconv7 = nn.ConvTranspose2d(3+3, 1, 3, stride=1, padding=1)
+    self.deconv_bn_layer7 = nn.BatchNorm2d(1)
+    self.deconv_dropout7 = nn.Dropout(p=0.4)
 
   def forward(self, img):
     encode_out.clear()
@@ -135,26 +139,29 @@ class TrafficCamera_Vgg(nn.Module):
 
     out = torch.cat((out, encode_out[-2]), 1)
     out = F.relu(self.deconv_bn_layer2(self.deconv2(out)))
-    out = self.deconv_dropout1(out)
-
+    out = self.deconv_dropout2(out)
 
     out = torch.cat((out, encode_out[-3]),1)
     out = F.relu(self.deconv_bn_layer3(self.deconv3(out)))
-    out = self.deconv_dropout1(out)
+    out = self.deconv_dropout3(out)
 
     out = torch.cat((out, encode_out[-4]),1)
     out = F.relu(self.deconv_bn_layer4(self.deconv4(out)))
-    out = self.deconv_dropout1(out)
+    out = self.deconv_dropout4(out)
 
     out = torch.cat((out, encode_out[-5]),1)
     out = F.relu(self.deconv_bn_layer5(self.deconv5(out)))
-    out = self.deconv_dropout1(out)
+    out = self.deconv_dropout5(out)
+
+    out = F.relu(self.deconv_bn_layer6(self.deconv6(out)))
+    out = self.deconv_dropout6(out)
 
     out = torch.cat((out, img),1)
-    out = self.deconv_bn_layer6(self.deconv6(out))
-    out = self.deconv_dropout1(out)
+    out = self.deconv_bn_layer7(self.deconv7(out))
+    out = self.deconv_dropout7(out)
 
     return out
+
 
 # Load saved model
 def load_saved_model():
@@ -240,7 +247,20 @@ def display_one_model_mask_with_boxes(model, loader):
     axarr[1, 0].imshow(bounding_plt)
     axarr[1, 1].imshow(bounding_masks_plt)
 
-def draw_bounding_boxes_on_image(model, image):
+def transform_image_for_model(image):
+    image_transforms1 = transforms.Compose([transforms.ToTensor(), transforms.Resize((256, 512)), transforms.ToPILImage()])
+    t_image = image_transforms1(image)
+
+    t_image = ImageEnhance.Contrast(t_image).enhance(0.65)
+    t_image = ImageEnhance.Brightness(t_image).enhance(1.3)
+    t_image = ImageEnhance.Sharpness(t_image).enhance(2)
+
+    image_transform2 = transforms.Compose([transforms.ToTensor()])
+    t_image = image_transform2(t_image)
+
+    return t_image
+
+def draw_bounding_boxes_on_image(image):
     sigmoid = nn.Sigmoid()
     image_model = torch.unsqueeze(image, axis=0)
 
@@ -255,10 +275,9 @@ def draw_bounding_boxes_on_image(model, image):
     bound_boxes = find_bounding_boxes(mask.copy(), only_bounding_boxes=True)
     return display_masked_image(image.copy(), bound_boxes.copy(), display=False)
 
-# example usage
-# image = Image.open(streets_dataset_filepath + '/images/Aptakisic at Bond IP East-3.jpg')
-# image_transforms = transforms.Compose([transforms.Resize((128, 256)), transforms.ToTensor()])
-# t_image = image_transforms(image)
+# # example usage
+# image = Image.open(streets_dataset_filepath + '/images/Aptakisic at Bond IP East-9.jpg')
+# t_image = transform_image_for_model(image)
 # masked_image = draw_bounding_boxes_on_image(t_image)  # this function takes in 1 image and returns the same image with the bounding boxes
 # plt.imshow(masked_image)
 # plt.show()
