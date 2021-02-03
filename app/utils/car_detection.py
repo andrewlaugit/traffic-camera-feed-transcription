@@ -165,9 +165,9 @@ def load_saved_model():
     batch_size = 16
     num_epochs = 30
     learning_rate = 0.001
-    model_save_name = '{}_{}_{}_{}_best.pt'.format(model_name, batch_size, num_epochs, learning_rate)
+    model_save_name = 'vgg_augmented_256p_16_20_0.001_best'.format(model_name, batch_size, num_epochs, learning_rate)
 
-    models_filepath = Path.cwd() / model_save_name
+    models_filepath = Path.cwd() / "models" / model_save_name
 
     model.load_state_dict(torch.load(models_filepath))
     if (torch.cuda.is_available()):

@@ -1,4 +1,4 @@
-from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread
+from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread, imencode
 import os
 from os import path
 from pathlib import Path
@@ -82,7 +82,7 @@ def video_details(video_path):
 """
 Extracts frames from the video at a selected frame rate
 """
-def image_extraction(video_path = None, image_per_second = 10, target_height = 256, target_width = 512, frame_count = 0):
+def image_extraction(video_path = None, image_per_second = 10, target_height = 256, target_width = 512):
     """
     Checks validity of provided video file path
     """
@@ -131,7 +131,7 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
     """
     
     scale = (target_width, target_height)
-    # save_interval = int(video_fps / image_per_second)
+    save_interval = int(video_fps / image_per_second)
     while(frame_count < total_video_frames):
         
         valid, image = video.read()
@@ -140,8 +140,7 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
             # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
             break
 
-        # if(valid and frame_count % save_interval == 0):
-        if(valid):
+        if(valid and frame_count % save_interval == 0):
             image = resize(image, scale)
             image_name = image_path + "\\" + video_name[0] + "_frame_{:08d}.jpg".format(frame_count)
             imwrite(image_name, image)
@@ -155,7 +154,7 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
     video.release()
 
     print(total_time)
-    return image_path, frame_count
+    return image_path
 
 """
 Generates video from images in given file
@@ -226,67 +225,3 @@ def run_model_on_file(model, image_path, target_height = 256, target_width = 512
     total_time = end - begin
 
     print(total_time)
-
-
-def get_segment(url):
-    m3u8_segments = m3u8.load(url)
-    segment = m3u8_segments.data["segments"][0]['uri']
-    return segment
-
-def get_stream(url, target_length = 20):
-    urltemp = url.split("/")
-    base_url = ""
-    for i in range(len(urltemp)-1):
-        base_url = base_url + urltemp[i] + "/"
-
-    length = 0
-
-    current_time = time.localtime()
-
-    file_name_temp = urltemp[-2].split(".")
-
-    temp_url = ""
-
-    frame_count = 0
-    model = load_saved_model()
-
-    while(length<target_length):
-        segment_url = get_segment(url)
-        segment_url = base_url + segment_url
-
-        if(segment_url != temp_url):
-            chunk_count=0
-            request = requests.get(segment_url, stream=True)
-            if(request.status_code == 200):
-                # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4" 
-                file_name = file_name_temp[0] + "_" + str(time.strftime("%Y_%m_%d_%H-%M-%S", time.localtime()))
-
-                save_path = Path.cwd() / "app" / "static" / file_name
-                file_save_path = save_path.__str__() + ".mp4" 
-                print(file_save_path)
-                with open(file_save_path,'wb') as file:
-                    for chunk in request.iter_content(chunk_size=1024):
-                        chunk_count += 1
-                        # print(chunk_count)
-                        file.write(chunk)
-                        if chunk_count>1000:
-                            print('File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
-                            break
-                    print("here")
-                file.close()
-                image_path, frame_count = image_extraction(file_save_path, frame_count=frame_count)
-                run_model_on_file(model, image_path)
-                print("Frame Count =", frame_count)
-                _,_,_,_, seg_length = video_details(file_save_path)
-                length = length + seg_length
-            else:
-                print("ERROR", request.status_code)
-        temp_url = segment_url
-        
-        
-        print("Frame Count =", frame_count)
-        
-    
-    # image_extraction(file_save_path)
-
-    # print(total_video_frames)

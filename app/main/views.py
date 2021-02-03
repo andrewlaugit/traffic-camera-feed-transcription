@@ -1,30 +1,32 @@
-from flask import render_template, request, flash, redirect, send_file, request
+from flask import render_template, request, flash, redirect, send_file, request, Response, session
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
 from app.utils.imageextraction import *
 from app.utils.car_detection import *
-
-
-
+from app.utils.live_stream import *
 
 @app.route('/')
 def home():
     
     return render_template("home.html")
 
+
+##############################
+#  NEEDS TO BE FIXED #########
+##############################
 @app.route('/uploaded_file')
 def uploaded_file():
     uploaded_videos = []
     download_videos = []
-    current_path = Path.cwd() / "app" / "static" #/ "videos"
+    current_path = Path.cwd() / "app" / "static" / "videos"
     folder_path = current_path.iterdir()
 
     for file in folder_path:
         if file.is_file():
             uploaded_videos.append(file.name)
 
-    current_path = Path.cwd() / "app" / "static" #/ "generatedvideos"
+    current_path = Path.cwd() / "app" / "static" / "generatedvideos"
     folder_path = current_path.iterdir()
 
     for file in folder_path:
@@ -46,24 +48,15 @@ def upload():
 
     current_path = Path.cwd()
     current_path = Path(current_path)
-    file_path = current_path / "app" / "static" / file_name
+    file_path = current_path / "app" / "static" / "videos" / file_name
     file.save(file_path.__str__())
     # image_extraction(file_path.__str__())
     return home()
 
-@app.route('/livestream', methods=["GET", "POST"])
-def live_stream():
-    if(request.method == "POST"):
-        url = request.form['url']
-        get_stream(url)
-        return home()
-    else:    
-        return render_template("live_stream.html")
-
 @app.route('/runmodel/<file_name>')
 def run_model(file_name):
     video_path = Path.cwd() / "app" / "static" / file_name
-    image_path, _ = image_extraction(video_path.__str__())
+    image_path = image_extraction(video_path.__str__())
     model = load_saved_model()
     run_model_on_file(model, image_path)
 
@@ -76,7 +69,7 @@ def youtube_video():
         url = request.form['url']
         print(url)
         video_path = Path(get_video_youtube(url))
-        image_path, _ = image_extraction(video_path.__str__())
+        image_path = image_extraction(video_path.__str__())
         model = load_saved_model()
         run_model_on_file(model, image_path)
         return home()
@@ -93,9 +86,70 @@ def download_file(file_name):
 def play_video(file_name):
     # current_path = Path.cwd() / "app" / "static"
     # file_path = current_path / file_name
-    # print(file_path)
+    print(file_name)
     # file_name = "videos" / Path(file_name)
     return render_template("play_video.html", file_name = file_name)
 
+
+@app.route('/livestream', methods=["GET", "POST"])
+def live_stream():
+    if(request.method == "POST"):
+        session["url"] = request.form['url']
+        
+        # get_stream(url)
+        return render_template("live_stream.html")
+    else:    
+        return render_template("live_stream.html")
+
+@app.route('/video_feed')
+def video_feed():
+    # url = "https://33-d6.divas.cloud/CHAN-286/CHAN-286_1.stream/chunklist_w1892043447.m3u8"
+    # print("here")
+    #Video streaming route. Put this in the src attribute of an img tag
+    if(session["url"] == None):
+        return None
+
+    return Response(gen_frames(session["url"]), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+def gen_frames( url):  # generate frame by frame from camera
+
+    """
+    Initialize first video segment and camera feed
+    """
+    target_fps = 10
+    last_frame = time.time()
+
+    segment = get_segment(url)
+    path, base_url = get_file_path(segment, url)
+    segment_url = get_segment_url(url, base_url, segment)
+    old_url = get_stream(segment_url, path, base_url, segment = segment)
+    total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
+    camera = cv2.VideoCapture(path)
+    model = load_saved_model()
+    frame_count = 0
+    while True:
+        success, frame = camera.read()  # read the camera frame
+        if not success:
+            camera.release()
+            segment = get_segment(url)
+            path, base_url = get_file_path(segment, url)
+            segment_url = get_segment_url(url, base_url, segment)
+
+            if(segment_url != old_url):
+                old_url = get_stream(segment_url, path, base_url, segment = segment)
+                total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
+                camera = cv2.VideoCapture(path)
+                model = load_saved_model()
+                frame_count = -1
+        elif(frame_count % frame_interval == 0):
+            frame = run_model_on_stream(model, frame)
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            last_frame = time.time()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
+
+        frame_count += 1
+        
 if __name__ == '__main__':
     app.run(debug=True)
