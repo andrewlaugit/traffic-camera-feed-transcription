@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 
 class CentroidTracker():
-	def __init__(self, maxDisappeared=1):
+	def __init__(self, maxDisappeared=0):
 		# initialize the next unique object ID along with two ordered
 		# dictionaries used to keep track of mapping a given object
 		# ID to its centroid and number of consecutive frames it has
@@ -11,7 +11,10 @@ class CentroidTracker():
 		self.nextObjectID = 0
 		self.objects = OrderedDict()
 		self.disappeared = OrderedDict()
-
+		self.objects_direction = OrderedDict()
+		self.car_past_direction = dict()
+		self.car_initial_position = dict()
+		self.road_directions = []
 		# store the number of maximum consecutive frames a given
 		# object is allowed to be marked as "disappeared" until we
 		# need to deregister the object from tracking
@@ -21,7 +24,10 @@ class CentroidTracker():
 		# when registering an object we use the next available object
 		# ID to store the centroid
 		self.objects[self.nextObjectID] = centroid
+		self.objects_direction[self.nextObjectID] = 0
 		self.disappeared[self.nextObjectID] = 0
+		self.car_past_direction[self.nextObjectID] = []
+		self.car_initial_position[self.nextObjectID] = centroid
 		self.nextObjectID += 1
 
 	def numberOfObjects(self):
@@ -30,8 +36,38 @@ class CentroidTracker():
 	def deregister(self, objectID):
 		# to deregister an object ID we delete the object ID from
 		# both of our respective dictionaries
+		print("deregistering " + str(objectID))
+		if (len(self.car_past_direction[objectID]) > 10): # can safety assume a direction
+			print("assuming a direction")
+			x = self.objects[objectID][0] - self.car_initial_position[objectID][0]
+			y = self.objects[objectID][1] - self.car_initial_position[objectID][1]
+
+			average_direction_x = x/(abs(x)+abs(y))
+			average_direction_y = y/(abs(x)+abs(y))
+			average_direction = (average_direction_x, average_direction_y)
+			if (len(self.road_directions) == 0):
+				self.road_directions.append((average_direction, 1))
+			else:
+				index = 0
+				found = False
+				for direction in self.road_directions:
+					if (abs(direction[0][0]-average_direction[0]) < 0.3 and abs(direction[0][1]-average_direction[1]) < 0.3):
+						found = True
+						break;
+					index+=1
+
+				if (found!=True):
+					print("starting a new direction")
+					self.road_directions.append((average_direction,1))
+				else:
+					print("appending to old direction")
+					self.road_directions[index] = (self.road_directions[index][0], self.road_directions[index][1]+1)
+		else:
+			print("cannot assume a direction")
 		del self.objects[objectID]
 		del self.disappeared[objectID]
+		del self.objects_direction[objectID]
+		del self.car_past_direction[objectID]
 
 	def update(self, rects):
 		# check to see if the list of input bounding box rectangles
@@ -50,7 +86,7 @@ class CentroidTracker():
 
 			# return early as there are no centroids or tracking info
 			# to update
-			return self.objects
+			return self.objects, self.objects_direction, self.road_directions
 
 		# initialize an array of input centroids for the current frame
 		inputCentroids = np.zeros((len(rects), 2), dtype="int")
@@ -113,8 +149,20 @@ class CentroidTracker():
 				# set its new centroid, and reset the disappeared
 				# counter
 				objectID = objectIDs[row]
+				# calculate direction
+				self.objects_direction[objectID] =  (inputCentroids[col][0] - self.objects[objectID][0], inputCentroids[col][1] - self.objects[objectID][1])
+
+				if (abs(self.objects_direction[objectID][0]) + abs(self.objects_direction[objectID][1]) !=0):
+					normalized_x = self.objects_direction[objectID][0] / (
+								abs(self.objects_direction[objectID][0]) + abs(self.objects_direction[objectID][1]))
+					normalized_y = self.objects_direction[objectID][1] / (
+								abs(self.objects_direction[objectID][0]) + abs(self.objects_direction[objectID][1]))
+					self.car_past_direction[objectID].append((normalized_x, normalized_y))
+
 				self.objects[objectID] = inputCentroids[col]
 				self.disappeared[objectID] = 0
+
+
 
 				# indicate that we have examined each of the row and
 				# column indexes, respectively
@@ -145,11 +193,11 @@ class CentroidTracker():
 						self.deregister(objectID)
 
 			# otherwise, if the number of input centroids is greater
-			# than the number of existing object centroids we need to
+			# than the number of existing object centroids wderegistere need to
 			# register each new input centroid as a trackable object
 			else:
 				for col in unusedCols:
 					self.register(inputCentroids[col])
 
 		# return the set of trackable objects
-		return self.objects
+		return self.objects, self.objects_direction, self.road_directions
