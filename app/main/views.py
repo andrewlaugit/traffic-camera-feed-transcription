@@ -2,9 +2,11 @@ from flask import render_template, request, flash, redirect, send_file, request,
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
+import queue
 from app.utils.imageextraction import *
 from app.utils.car_detection import *
 from app.utils.live_stream import *
+from app.utils.centroidtracker import *
 
 @app.route('/')
 def home():
@@ -109,6 +111,20 @@ def video_feed():
     if(session["url"] == None):
         return None
 
+    """
+    Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
+    """
+
+    """
+    Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
+    The multiprocessing isn't too important as it is not time limiting on GTX 1080
+    On weaker computer it may cause the video processing to run behind
+    """
+
+    """
+    Change gen_frames function to only draw from priorty queue
+    """
+
     return Response(gen_frames(session["url"]), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def gen_frames( url):  # generate frame by frame from camera
@@ -117,7 +133,8 @@ def gen_frames( url):  # generate frame by frame from camera
     Initialize first video segment and camera feed
     """
     target_fps = 10
-    last_frame = time.time()
+    # last_frame = time.time()
+
 
     segment = get_segment(url)
     path, base_url = get_file_path(segment, url)
@@ -125,7 +142,9 @@ def gen_frames( url):  # generate frame by frame from camera
     old_url = get_stream(segment_url, path, base_url, segment = segment)
     total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
     camera = cv2.VideoCapture(path)
+    camera.set(cv2.CAP_PROP_FPS,target_fps)
     model = load_saved_model()
+    ct = CentroidTracker()
     frame_count = 0
     while True:
         success, frame = camera.read()  # read the camera frame
@@ -142,10 +161,10 @@ def gen_frames( url):  # generate frame by frame from camera
                 model = load_saved_model()
                 frame_count = -1
         elif(frame_count % frame_interval == 0):
-            frame = run_model_on_stream(model, frame)
+            frame = run_model_on_stream(model, frame, ct)
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
-            last_frame = time.time()
+            # last_frame = time.time()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 
