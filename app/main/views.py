@@ -140,12 +140,12 @@ def gen_frames( url):  # generate frame by frame from camera
     path, base_url = get_file_path(segment, url)
     segment_url = get_segment_url(url, base_url, segment)
     old_url = get_stream(segment_url, path, base_url, segment = segment)
-    total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
+    # total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
     camera = cv2.VideoCapture(path)
-    camera.set(cv2.CAP_PROP_FPS,target_fps)
     model = load_saved_model()
     ct = CentroidTracker()
     frame_count = 0
+    last_frame_time = 0
     while True:
         success, frame = camera.read()  # read the camera frame
         if not success:
@@ -155,12 +155,15 @@ def gen_frames( url):  # generate frame by frame from camera
             segment_url = get_segment_url(url, base_url, segment)
 
             if(segment_url != old_url):
+                last_frame_time = 0
                 old_url = get_stream(segment_url, path, base_url, segment = segment)
-                total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
+                # total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
                 camera = cv2.VideoCapture(path)
                 model = load_saved_model()
                 frame_count = -1
-        elif(frame_count % frame_interval == 0):
+        elif(camera.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000/target_fps):
+            last_frame_time = camera.get(CAP_PROP_POS_MSEC)
+            print(camera.get(CAP_PROP_POS_MSEC) - last_frame_time)
             frame = run_model_on_stream(model, frame, ct)
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()

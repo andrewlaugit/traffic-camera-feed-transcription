@@ -368,7 +368,7 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, width = 512, height = 256):
                         (480 + int(road_directions[0][0][0]*15),
                             190 + int(road_directions[0][0][1]*15)),
                         (255, 0, 0), 1, tipLength=0.5)
-        print(road_directions[0][1])
+        # print(road_directions[0][1])
         cv2.putText(frame, str(int(
             road_directions[0][1])), (495, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
