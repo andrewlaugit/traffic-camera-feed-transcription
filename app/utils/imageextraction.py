@@ -3,9 +3,12 @@ import os
 from os import path
 from pathlib import Path
 import time
+from numpy.lib.type_check import imag
 from pytube import YouTube, Stream
 import requests
 import m3u8
+import queue
+import multiprocessing as mp
 from urllib.parse import urlparse
 from app.utils.car_detection import *
 
@@ -13,14 +16,13 @@ from app.utils.car_detection import *
 """
 Retrieves video from youtube in smallest mp4 format available and saves it to videos folder in working directory
 """
-def get_video_youtube(url):
+
+
+def get_video_youtube(url, save_path=Path.cwd() / "app" / "static" / "videos"):
     """
     ensures video folder exists in project root directory
     """
 
-    save_path = Path.cwd() / "app" / "static" 
-    # save_path = current_path + r"\videos"
-    
     if not path.isdir(save_path):
         os.mkdir(save_path)
 
@@ -29,17 +31,21 @@ def get_video_youtube(url):
     smallest stream is selected as our model is being trained on low resolution images and this saves space
     """
     youtube_object = YouTube(url)
-    video_path = youtube_object.streams.filter(progressive=True, file_extension='mp4').get_lowest_resolution().download(save_path.__str__())
+    video_path = youtube_object.streams.filter(
+        progressive=True, file_extension='mp4').get_lowest_resolution().download(save_path.__str__())
 
     return video_path
+
 
 """
 Checks that the path goes to a file
 """
+
+
 def check_file_path(video_path):
     if video_path == None:
         print("No video file provided")
-        return False    
+        return False
 
     if not path.exists(video_path):
         print("Invalid Path")
@@ -51,9 +57,12 @@ def check_file_path(video_path):
 
     return True
 
+
 """
 Get and reutrns the details for the video pointed to by the file path
 """
+
+
 def video_details(video_path):
     check_file_path(video_path)
     # print(type(video_path))
@@ -71,7 +80,7 @@ def video_details(video_path):
     print("Total Number of Frames: ", total_video_frames)
     print("Frame Height: ", frame_height)
     print("Frame Width: ", frame_width)
-    print("Frames per Second: ", video_fps)  
+    print("Frames per Second: ", video_fps)
     print("Video Length: ", video_length)
 
     video.release()
@@ -80,16 +89,16 @@ def video_details(video_path):
 
 
 """
-Extracts frames from the video at a selected frame rate
+Extracts frames from the video at a selected frame rate saves images in folder
 """
-def image_extraction(video_path = None, image_per_second = 10, target_height = 256, target_width = 512):
+
+
+def image_extraction_to_file(video_path=None, image_per_second=10, target_height=256, target_width=512):
     """
     Checks validity of provided video file path
     """
     if(check_file_path(video_path) == False):
         return False
-
-    total_video_frames, video_fps, _, _, _ = video_details(video_path)
 
     """
     loads video
@@ -100,28 +109,28 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
         print("Unable to open file. Please ensure input video is either .AVI or .MKV")
         return False
 
-    _, video_name = os.path.split(video_path)
+    video_path = Path(video_path)
 
-    video_name = video_name.split(".")
+    video_name = video_path.stem
 
     """
     gets working directory
     """
-    current_path = os.getcwd()
+    current_path = Path.cwd()
 
     """
     ensures image folder exists in project root directory
     """
-    if not path.isdir(current_path + r"\images"):
-        os.mkdir(current_path + r"\images")
 
-    image_path = current_path + r"\images\\" + video_name[0]
+    image_path = current_path / "images"
 
-    if not path.isdir(image_path):
-        os.mkdir(image_path)    
+    if not Path.is_dir(image_path):
+        Path.mkdir(image_path)
 
-    print(image_path)
+    image_path = image_path / video_name
 
+    if not Path.is_dir(image_path):
+        Path.mkdir(image_path)
 
     begin = time.time()
 
@@ -129,21 +138,77 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
     iterates through loaded video and extracts frames
     at intervals dictated by save_interal 
     """
-    
+
     scale = (target_width, target_height)
-    save_interval = int(video_fps / image_per_second)
-    while(frame_count < total_video_frames):
-        
+    last_frame_time = -10000000
+    frame_count = 0
+    while True:
+
+        valid, image = video.read()
+
+        if not valid:
+            break
+
+        if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
+            last_frame_time = video.get(CAP_PROP_POS_MSEC)
+            image = resize(image, scale)
+            image_name = image_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_count))
+            imwrite(image_name.__str__(), image)
+
+        frame_count += 1
+
+    end = time.time()
+
+    total_time = end - begin
+
+    video.release()
+
+    print("Total time to extract and save frames: ", total_time)
+    return image_path
+
+
+"""
+Extracts frames from the video at a selected frame rate saves images to queue
+"""
+def image_extraction_to_queue(video_path=None, image_per_second=10, target_height=256, target_width=512):
+    """
+    Checks validity of provided video file path
+    """
+    if(check_file_path(video_path) == False):
+        return False
+
+    """
+    loads video
+    """
+    video = VideoCapture(video_path)
+
+    if not video.isOpened():
+        print("Unable to open file. Please ensure input video is either .AVI or .MKV")
+        return False
+
+    begin = time.time()
+
+    """
+    iterates through loaded video and extracts frames
+    at intervals dictated by save_interal 
+    """
+
+    scale = (target_width, target_height)
+    last_frame_time = -10000000
+    frame_queue = mp.Queue()
+    frame_count = 0
+    while True:
+
         valid, image = video.read()
 
         if not valid:
             # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
             break
 
-        if(valid and frame_count % save_interval == 0):
+        if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
+            last_frame_time = video.get(CAP_PROP_POS_MSEC)
             image = resize(image, scale)
-            image_name = image_path + "\\" + video_name[0] + "_frame_{:08d}.jpg".format(frame_count)
-            imwrite(image_name, image)
+            frame_queue.put((frame_count, image))
 
         frame_count += 1
 
@@ -154,35 +219,115 @@ def image_extraction(video_path = None, image_per_second = 10, target_height = 2
     video.release()
 
     print(total_time)
-    return image_path
+    return frame_queue
+
 
 """
 Generates video from images in given file
 """
-def make_video(image_path, size, fps):
-    
-    current_path = os.getcwd()
+
+
+def make_video(image_path, size = (512, 256), fps = 10):
+
+    current_path = Path.cwd()
+
+    save_path = current_path / "generatedvideos"
 
     images = []
     names = []
 
-    for image in os.listdir(image_path):
-        names.append(image)
-        img = imread(os.path.join(image_path, image))
+    for image in Path.iterdir(image_path):
+        names.append(image.stem)
+        img = imread(image.__str__())
         images.append(img)
 
-    out = [x for _, x in sorted(zip(names,images))]
+    out = [x for _, x in sorted(zip(names, images))]
 
-    if not path.isdir(current_path + r"\generatedvideos"):
-        os.mkdir(current_path + r"\generatedvideos")
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
 
-    name = image_path.split("\\")
-    print(name[len(name)-1])
+    save_path = save_path / (names[-1] + ".avi")
 
-    video_path = current_path + r"\generatedvideos\\" + name[len(name)-1] + r".avi"
+    codex = VideoWriter_fourcc(*'XVID')
+    writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
+    for image in out:
+        writer.write(image)
+    writer.release()
+
+    return save_path
+
+
+def run_model_on_file(model, image_path, target_height=256, target_width=512, start_frame=0):
+
+    current_path = Path.cwd()
+
+    processed_path = current_path / "processed_images"
+
+    if not Path.is_dir(processed_path):
+        Path.mkdir(processed_path)
+
+    video_name = image_path.stem
+
+    processed_path = processed_path / video_name
+
+    if not Path.is_dir(processed_path):
+        Path.mkdir(processed_path)
+
+    begin = time.time()
+
+    ct = CentroidTracker()
+    for image_name in Path.iterdir(image_path):
+        image_name = image_name.name
+        img = imread((image_path / image_name).__str__())
+        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
+        out_path = processed_path / ("Processed_" + image_name.__str__())
+        imwrite(out_path.__str__(), img_out)
+
+    make_video(processed_path, (512, 256), 10)
+
+    end = time.time()
+
+    total_time = end - begin
+
+    print("Time taken to process video frames:", total_time)
+
+
+def run_model_on_queue(model, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
+
+    ct = CentroidTracker()
+    while frame_queue.empty() is False:
+        frame_num, img = frame_queue.get()
+        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
+        processed_queue.put((frame_num, img_out))
+
+def make_video_from_queue(video_name, processed_queue, size = (512, 256), fps = 10):
+    
+    current_path = Path.cwd()
+
+    images = []
+    names = []
+
+    while processed_queue.empty() is False:
+        name, image = processed_queue.get()
+        names.append(name)
+        images.append(image)
+
+    out = [x for _, x in sorted(zip(names, images))]
+
+    save_path = current_path / "app" / "static" / "generatedvideos"
+
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
+
+    video_path = current_path + r"\generatedvideos\\" + \
+        name[len(name)-1] + r".avi"
+
+    video_name = video_name + ".mp4"
+
+    save_path = save_path / video_name
 
     codex = VideoWriter_fourcc(*'MP4V')
-    writer = VideoWriter(video_path, codex, fps, (size[1],size[0]))
+    writer = VideoWriter(save_path, codex, fps, (size[0], size[1]))
 
     for image in out:
         # cv2_imshow(image)
@@ -190,38 +335,3 @@ def make_video(image_path, size, fps):
     writer.release()
 
     return video_path
-
-
-
-def run_model_on_file(model, image_path, target_height = 256, target_width = 512, start_frame = 0):
-
-    current_path = os.getcwd()
-
-    if not path.isdir(current_path + r"/processed_images"):
-        os.mkdir(current_path + r"/processed_images")
-
-    video_name = image_path.split("\\")
-
-    processed_path = current_path + r"/processed_images/" + video_name[-1]
-
-    if not path.isdir(processed_path):
-        os.mkdir(processed_path)
-
-    begin = time.time()
-
-    image_transforms = transforms.Compose([transforms.Resize((target_height, target_width)), transforms.ToTensor()])
-    for image in os.listdir(image_path):
-        img = Image.open(image_path + "/" + image)
-        t_image = image_transforms(img)
-        img_out = draw_bounding_boxes_on_image(model, t_image)
-        img_out = cv2.cvtColor(img_out*255,cv2.COLOR_RGB2BGR)
-        out_path = processed_path + "/Processed_" + image
-        imwrite(out_path, img_out)
-
-    # make_video(processed_path, size, fps)
-
-    end = time.time()
-
-    total_time = end - begin
-
-    print(total_time)

@@ -37,10 +37,10 @@ class CentroidTracker():
     def deregister(self, objectID):
         # to deregister an object ID we delete the object ID from
         # both of our respective dictionaries
-        print("deregistering " + str(objectID))
+        # print("deregistering " + str(objectID))
         # can safety assume a direction
         if (len(self.car_past_direction[objectID]) > 10):
-            print("assuming a direction")
+            # print("assuming a direction")
             x = self.objects[objectID][0] - \
                 self.car_initial_position[objectID][0]
             y = self.objects[objectID][1] - \
@@ -61,14 +61,14 @@ class CentroidTracker():
                     index += 1
 
                 if (found != True):
-                    print("starting a new direction")
+                    # print("starting a new direction")
                     self.road_directions.append((average_direction, 1))
                 else:
-                    print("appending to old direction")
+                    # print("appending to old direction")
                     self.road_directions[index] = (
                         self.road_directions[index][0], self.road_directions[index][1]+1)
-        else:
-            print("cannot assume a direction")
+        # else:
+            # print("cannot assume a direction")
         del self.objects[objectID]
         del self.disappeared[objectID]
         del self.objects_direction[objectID]

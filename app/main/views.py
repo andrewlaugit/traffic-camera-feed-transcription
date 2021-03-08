@@ -57,12 +57,10 @@ def upload():
 
 @app.route('/runmodel/<file_name>')
 def run_model(file_name):
-    video_path = Path.cwd() / "app" / "static" / file_name
-    image_path = image_extraction(video_path.__str__())
+    video_path = Path.cwd() / "app" / "static" / "videos" / file_name
+    image_path = image_extraction_to_file(video_path.__str__())
     model = load_saved_model()
     run_model_on_file(model, image_path)
-
-    print(image_path)
     return home()
 
 @app.route('/youtube_video', methods=["GET", "POST"])
@@ -71,7 +69,7 @@ def youtube_video():
         url = request.form['url']
         print(url)
         video_path = Path(get_video_youtube(url))
-        image_path = image_extraction(video_path.__str__())
+        image_path = image_extraction_to_file(video_path.__str__())
         model = load_saved_model()
         run_model_on_file(model, image_path)
         return home()
