@@ -360,6 +360,8 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, width = 512, height = 256):
     # cv2.putText(frame, "Traffic Condition", (400, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
     # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
 
+    cv2.rectangle(frame, (390, 180), (512, 256), (255, 255, 255), -1)
+    
     if (len(road_directions) > 0):
         cv2.putText(frame, "Direction", (400, 200),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)

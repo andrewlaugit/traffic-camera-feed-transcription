@@ -46,8 +46,12 @@ class CentroidTracker():
             y = self.objects[objectID][1] - \
                 self.car_initial_position[objectID][1]
 
-            average_direction_x = x/(abs(x)+abs(y))
-            average_direction_y = y/(abs(x)+abs(y))
+            if abs(x) + abs(y) < 0.00001:
+                average_direction_x = 0
+                average_direction_y = 0
+            else:
+                average_direction_x = x/(abs(x)+abs(y))
+                average_direction_y = y/(abs(x)+abs(y))
             average_direction = (average_direction_x, average_direction_y)
             if (len(self.road_directions) == 0):
                 self.road_directions.append((average_direction, 1))

@@ -57,21 +57,28 @@ def upload():
 
 @app.route('/runmodel/<file_name>')
 def run_model(file_name):
+    frame_queue = queue.Queue()
+    processed_queue = queue.Queue()
     video_path = Path.cwd() / "app" / "static" / "videos" / file_name
-    image_path = image_extraction_to_file(video_path.__str__())
+    image_extraction_to_queue(video_path.__str__(), frame_queue)
     model = load_saved_model()
-    run_model_on_file(model, image_path)
+    run_model_on_queue(model, frame_queue, processed_queue)
+    make_video_from_queue(file_name, processed_queue, (512, 256), 10)
     return home()
 
 @app.route('/youtube_video', methods=["GET", "POST"])
 def youtube_video():
     if(request.method == "POST"):
         url = request.form['url']
-        print(url)
+        # print(url)
         video_path = Path(get_video_youtube(url))
-        image_path = image_extraction_to_file(video_path.__str__())
+        file_name = video_path.stem
+        frame_queue = queue.Queue()
+        processed_queue = queue.Queue()
+        image_extraction_to_queue(video_path.__str__(), frame_queue)
         model = load_saved_model()
-        run_model_on_file(model, image_path)
+        run_model_on_queue(model, frame_queue, processed_queue)
+        make_video_from_queue(file_name.__str__(), processed_queue, (512, 256), 10)
         return home()
     else:  
         return render_template("youtube_video.html")
@@ -143,7 +150,8 @@ def gen_frames( url):  # generate frame by frame from camera
     model = load_saved_model()
     ct = CentroidTracker()
     frame_count = 0
-    last_frame_time = 0
+    last_frame_video_time = -100000
+    last_frame_shown_time = time.time()
     while True:
         success, frame = camera.read()  # read the camera frame
         if not success:
@@ -153,19 +161,24 @@ def gen_frames( url):  # generate frame by frame from camera
             segment_url = get_segment_url(url, base_url, segment)
 
             if(segment_url != old_url):
-                last_frame_time = 0
+                last_frame_video_time = -100000
                 old_url = get_stream(segment_url, path, base_url, segment = segment)
                 # total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
                 camera = cv2.VideoCapture(path)
                 model = load_saved_model()
                 frame_count = -1
-        elif(camera.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000/target_fps):
-            last_frame_time = camera.get(CAP_PROP_POS_MSEC)
-            print(camera.get(CAP_PROP_POS_MSEC) - last_frame_time)
+        elif(camera.get(CAP_PROP_POS_MSEC) - last_frame_video_time >= 1000/target_fps):
+            last_frame_video_time = camera.get(CAP_PROP_POS_MSEC)
             frame = run_model_on_stream(model, frame, ct)
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
             # last_frame = time.time()
+            print(time.time() - last_frame_shown_time)
+            while(time.time() - last_frame_shown_time < (1/target_fps)):
+                print("waiting")
+                time.sleep((1/(target_fps*4)))
+
+            last_frame_shown_time = time.time()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 

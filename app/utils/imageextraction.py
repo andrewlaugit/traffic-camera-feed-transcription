@@ -23,8 +23,8 @@ def get_video_youtube(url, save_path=Path.cwd() / "app" / "static" / "videos"):
     ensures video folder exists in project root directory
     """
 
-    if not path.isdir(save_path):
-        os.mkdir(save_path)
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
 
     """
     Gets youtube object, identifies the smallest stream and downloads it
@@ -93,7 +93,7 @@ Extracts frames from the video at a selected frame rate saves images in folder
 """
 
 
-def image_extraction_to_file(video_path=None, image_per_second=10, target_height=256, target_width=512):
+def image_extraction_to_file(video_path, image_per_second=10, target_height=256, target_width=512):
     """
     Checks validity of provided video file path
     """
@@ -170,7 +170,7 @@ def image_extraction_to_file(video_path=None, image_per_second=10, target_height
 """
 Extracts frames from the video at a selected frame rate saves images to queue
 """
-def image_extraction_to_queue(video_path=None, image_per_second=10, target_height=256, target_width=512):
+def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512):
     """
     Checks validity of provided video file path
     """
@@ -195,7 +195,6 @@ def image_extraction_to_queue(video_path=None, image_per_second=10, target_heigh
 
     scale = (target_width, target_height)
     last_frame_time = -10000000
-    frame_queue = mp.Queue()
     frame_count = 0
     while True:
 
@@ -219,42 +218,9 @@ def image_extraction_to_queue(video_path=None, image_per_second=10, target_heigh
     video.release()
 
     print(total_time)
-    return frame_queue
 
 
-"""
-Generates video from images in given file
-"""
 
-
-def make_video(image_path, size = (512, 256), fps = 10):
-
-    current_path = Path.cwd()
-
-    save_path = current_path / "generatedvideos"
-
-    images = []
-    names = []
-
-    for image in Path.iterdir(image_path):
-        names.append(image.stem)
-        img = imread(image.__str__())
-        images.append(img)
-
-    out = [x for _, x in sorted(zip(names, images))]
-
-    if not Path.is_dir(save_path):
-        Path.mkdir(save_path)
-
-    save_path = save_path / (names[-1] + ".avi")
-
-    codex = VideoWriter_fourcc(*'XVID')
-    writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
-    for image in out:
-        writer.write(image)
-    writer.release()
-
-    return save_path
 
 
 def run_model_on_file(model, image_path, target_height=256, target_width=512, start_frame=0):
@@ -283,7 +249,22 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
         out_path = processed_path / ("Processed_" + image_name.__str__())
         imwrite(out_path.__str__(), img_out)
 
-    make_video(processed_path, (512, 256), 10)
+    end = time.time()
+
+    total_time = end - begin
+
+    print("Time taken to process video frames:", total_time)
+
+    return processed_path
+
+
+def run_model_on_queue(model, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
+    begin = time.time()
+    ct = CentroidTracker()
+    while frame_queue.empty() is False:
+        frame_num, img = frame_queue.get()
+        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
+        processed_queue.put((frame_num, img_out))
 
     end = time.time()
 
@@ -292,13 +273,42 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
     print("Time taken to process video frames:", total_time)
 
 
-def run_model_on_queue(model, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
+"""
+Generates video from images in given file
+"""
 
-    ct = CentroidTracker()
-    while frame_queue.empty() is False:
-        frame_num, img = frame_queue.get()
-        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
-        processed_queue.put((frame_num, img_out))
+
+def make_video(image_path, size = (512, 256), fps = 10):
+
+    current_path = Path.cwd()
+
+    save_path = current_path / "app" / "static" / "generatedvideos"
+
+    images = []
+    names = []
+
+    for image in Path.iterdir(image_path):
+        names.append(image.stem)
+        img = imread(image.__str__())
+        images.append(img)
+
+    out = [x for _, x in sorted(zip(names, images))]
+
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
+
+    video_name = image_path.stem + ".avi"
+
+    save_path = save_path / video_name
+
+    codex = VideoWriter_fourcc(*'XVID')
+    writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
+    for image in out:
+        writer.write(image)
+    writer.release()
+
+    return save_path
+
 
 def make_video_from_queue(video_name, processed_queue, size = (512, 256), fps = 10):
     
@@ -319,19 +329,16 @@ def make_video_from_queue(video_name, processed_queue, size = (512, 256), fps = 
     if not Path.is_dir(save_path):
         Path.mkdir(save_path)
 
-    video_path = current_path + r"\generatedvideos\\" + \
-        name[len(name)-1] + r".avi"
-
-    video_name = video_name + ".mp4"
+    video_name = video_name + ".avi"
 
     save_path = save_path / video_name
 
-    codex = VideoWriter_fourcc(*'MP4V')
-    writer = VideoWriter(save_path, codex, fps, (size[0], size[1]))
+    codex = VideoWriter_fourcc(*'XVID')
+    writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
 
     for image in out:
         # cv2_imshow(image)
         writer.write(image)
     writer.release()
 
-    return video_path
+    return save_path
