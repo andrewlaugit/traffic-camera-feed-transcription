@@ -6,7 +6,7 @@ import requests
 import queue
 from urllib.parse import urlparse
 from app.utils.car_detection import *
-from app.utils.imageextraction import video_details, check_file_path
+from app.utils.imageextraction import image_extraction_to_queue, run_model_on_queue, video_details, check_file_path
 from app.utils.centroidtracker import *
 
 
@@ -15,18 +15,18 @@ def get_segment(url):
     segment = m3u8_segments.data["segments"][0]
     return segment
 
+def get_segments(url):
+    m3u8_segments = m3u8.load(url)
+    segments = m3u8_segments.data["segments"]
+    return segments
 
-def get_segment_url(url, base_url, segment):
-    # while(length<target_length):
+def get_segment_url(base_url, segment):
     segment_url = base_url + segment["uri"]
     return segment_url
 
 
-def get_file_path(segment, url):
+def get_file_path(url):
     urltemp = url.split("/")
-    base_url = ""
-    for i in range(len(urltemp)-1):
-        base_url = base_url + urltemp[i] + "/"
 
     file_name_temp = urltemp[-2].split(".")
 
@@ -38,48 +38,43 @@ def get_file_path(segment, url):
         Path.mkdir(save_path)
 
     current_time = str(time.strftime("%Y_%m_%d_%H-%M-%S", time.localtime()))
-    file_name = file_name_temp[0] + "_" + current_time
 
     save_path = save_path / file_name_temp[0]
 
     if not Path.is_dir(save_path):
         Path.mkdir(save_path)
 
-    save_path = save_path.__str__() + "_" + current_time
-    file_save_path = save_path.__str__() + ".mp4"
+    save_path = save_path.__str__() + "_" + current_time + ".mp4"
 
-    return file_save_path, base_url
+    return save_path
 
 
-def get_stream(segment_url, file_save_path, base_url, segment, temp_url=""):
+def get_base_url(url):
+    urltemp = url.split("/")
+    base_url = ""
+    for i in range(len(urltemp)-1):
+        base_url = base_url + urltemp[i] + "/"
+    return base_url
 
-    chunk_count = 0
+
+def get_stream(segment_url, file_save_path):
+
+    # chunk_count = 0
     request = requests.get(segment_url, stream=True)
     if(request.status_code == 200):
-        # file_save_path = save_path.__str__() + "_" + str(i) + ".mp4"
-
-        print(segment["uri"])
-
         with open(file_save_path, 'wb') as file:
             for chunk in request.iter_content(chunk_size=1024):
-                chunk_count += 1
+                # chunk_count += 1
                 # print(chunk_count)
                 file.write(chunk)
-                if chunk_count > 1024:
-                    print(
-                        'File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
-                    break
+                # if chunk_count > 1024:
+                #     print(
+                #         'File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
+                #     break
         file.close()
-        # begin = time.time()
-        # model_on_stream(model, file_save_path, duration=segment["duration"])
-        # print(time.time() - begin)
-        # length = length + segment["duration"]
     else:
         print("ERROR", request.status_code)
     return segment_url
-
-
-
 
 
 def run_model_on_stream(model, image, ct, video_name="", frame_count=0, target_height=256, target_width=512, start_frame=0):
@@ -95,84 +90,44 @@ def run_model_on_stream(model, image, ct, video_name="", frame_count=0, target_h
 
     return img_out
 
+def get_stream_and_frames(url, frame_queue):
+    segments = queue.Queue()
+    segment_urls = queue.Queue()
+    all_segments = []
 
-def get_video_frames_details(video_path):
-    """
-    loads video
-    """
-    video = VideoCapture(video_path)
+    base_url = get_base_url(url)
 
-    if not video.isOpened():
-        print("Unable to open file. Please ensure input video is either .AVI or .MKV")
-        return False
+    total_frames = 0
 
-    """
-    iterates through loaded video and extracts frames
-    at intervals dictated by save_interal 
-    """
+    while True:
 
-    frame_count = 0
+        if len(all_segments) > 10:
+            all_segments.pop(0)
 
-    while(True):
+        new_segments = get_segments(url)
 
-        valid, _ = video.read()
+        for item in new_segments:
+            if item not in all_segments:
+                segments.put(item)
+                all_segments.append(item)
 
-        if not valid:
-            # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
-            break
+        while segments.empty() is False:
+            segment_urls.put(get_segment_url(base_url, segments.get()))
 
-        frame_count += 1
+        if segment_urls.empty() is False:
+            save_path = get_file_path(url)
+            get_stream(segment_urls.get(), save_path)
+            total_frames += image_extraction_to_queue(save_path, frame_queue, frame_count = total_frames)
+        else:
+            time.sleep(1)
+    
+def run_model_on_queue_loop(frame_queue, processed_queue):
+    model = load_saved_model()
 
-    video.release()
+    while True:
+        if frame_queue.empty() is False:
+            run_model_on_queue(model, frame_queue, processed_queue)
+        else:
+            time.sleep(1)
 
-    return frame_count
-
-
-def get_frame_interval(video_path, segment, target_fps=10):
-    total_frames = get_video_frames_details(video_path)
-    video_fps = total_frames / segment["duration"]
-    frame_interval = int(video_fps / target_fps)
-    return total_frames, video_fps, frame_interval
-
-
-
-
-def extract_frames(video_path = None, frame_queue = None, segment = None, image_per_second = 10, target_height = 256, target_width = 512, frame_count = 0):
-    """
-    Checks validity of provided video file path
-    """
-    if(check_file_path(video_path) == False):
-        return False
-
-    total_video_frames, _, _, _, _ = video_details(video_path)
-
-    video_fps = total_video_frames / segment["duration"]
-
-    """
-    loads video
-    """
-    video = VideoCapture(video_path)
-
-    """
-    iterates through loaded video and extracts frames
-    at intervals dictated by save_interal 
-    """
-
-    scale = (target_width, target_height)
-    save_interval = int(video_fps / image_per_second)
-    while(True):
-        
-        valid, image = video.read()
-
-        if not valid:
-            # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
-            break
-
-        if(valid and frame_count % save_interval == 0):
-            image = resize(image, scale)
-            frame_queue.put((image, frame_count))
-
-        frame_count += 1
-
-    video.release()
-
+    

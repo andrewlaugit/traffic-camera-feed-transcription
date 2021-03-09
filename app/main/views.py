@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
 import queue
+import threading
 from app.utils.imageextraction import *
 from app.utils.car_detection import *
 from app.utils.live_stream import *
@@ -119,70 +120,45 @@ def video_feed():
     """
     Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
     """
+    frame_queue = queue.Queue()
+
+    sf = threading.Thread(target=get_stream_and_frames, args=(session["url"], frame_queue,), daemon=True)
+    sf.start()
 
     """
     Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
     The multiprocessing isn't too important as it is not time limiting on GTX 1080
     On weaker computer it may cause the video processing to run behind
     """
+    processed_queue = queue.PriorityQueue()
+    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue,), daemon=True)
+    rm.start()
 
     """
     Change gen_frames function to only draw from priorty queue
     """
 
-    return Response(gen_frames(session["url"]), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen_frames(processed_queue), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-def gen_frames( url):  # generate frame by frame from camera
+def gen_frames(processed_queue):  # generate frame by frame from camera
 
     """
     Initialize first video segment and camera feed
     """
     target_fps = 10
-    # last_frame = time.time()
-
-
-    segment = get_segment(url)
-    path, base_url = get_file_path(segment, url)
-    segment_url = get_segment_url(url, base_url, segment)
-    old_url = get_stream(segment_url, path, base_url, segment = segment)
-    # total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
-    camera = cv2.VideoCapture(path)
-    model = load_saved_model()
-    ct = CentroidTracker()
-    frame_count = 0
-    last_frame_video_time = -100000
     last_frame_shown_time = time.time()
     while True:
-        success, frame = camera.read()  # read the camera frame
-        if not success:
-            camera.release()
-            segment = get_segment(url)
-            path, base_url = get_file_path(segment, url)
-            segment_url = get_segment_url(url, base_url, segment)
+        _, frame = processed_queue.get()
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        while(time.time() - last_frame_shown_time < (1/target_fps)):
+            time.sleep((1/(target_fps*4)))
 
-            if(segment_url != old_url):
-                last_frame_video_time = -100000
-                old_url = get_stream(segment_url, path, base_url, segment = segment)
-                # total_frames, video_fps, frame_interval = get_frame_interval(path, segment, target_fps)
-                camera = cv2.VideoCapture(path)
-                model = load_saved_model()
-                frame_count = -1
-        elif(camera.get(CAP_PROP_POS_MSEC) - last_frame_video_time >= 1000/target_fps):
-            last_frame_video_time = camera.get(CAP_PROP_POS_MSEC)
-            frame = run_model_on_stream(model, frame, ct)
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            # last_frame = time.time()
-            print(time.time() - last_frame_shown_time)
-            while(time.time() - last_frame_shown_time < (1/target_fps)):
-                print("waiting")
-                time.sleep((1/(target_fps*4)))
+        last_frame_shown_time = time.time()
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 
-            last_frame_shown_time = time.time()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 
-        frame_count += 1
         
 if __name__ == '__main__':
     app.run(debug=True)

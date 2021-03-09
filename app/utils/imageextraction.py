@@ -8,7 +8,6 @@ from pytube import YouTube, Stream
 import requests
 import m3u8
 import queue
-import multiprocessing as mp
 from urllib.parse import urlparse
 from app.utils.car_detection import *
 
@@ -170,7 +169,7 @@ def image_extraction_to_file(video_path, image_per_second=10, target_height=256,
 """
 Extracts frames from the video at a selected frame rate saves images to queue
 """
-def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512):
+def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512, frame_count = 0):
     """
     Checks validity of provided video file path
     """
@@ -195,7 +194,6 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
 
     scale = (target_width, target_height)
     last_frame_time = -10000000
-    frame_count = 0
     while True:
 
         valid, image = video.read()
@@ -218,6 +216,8 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     video.release()
 
     print(total_time)
+
+    return frame_count
 
 
 
