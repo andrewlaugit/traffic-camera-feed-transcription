@@ -185,8 +185,6 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
         print("Unable to open file. Please ensure input video is either .AVI or .MKV")
         return False
 
-    begin = time.time()
-
     """
     iterates through loaded video and extracts frames
     at intervals dictated by save_interal 
@@ -209,13 +207,7 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
 
         frame_count += 1
 
-    end = time.time()
-
-    total_time = end - begin
-
     video.release()
-
-    print(total_time)
 
     return frame_count
 

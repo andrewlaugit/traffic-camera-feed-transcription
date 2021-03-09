@@ -126,6 +126,7 @@ def video_feed():
     sf.start()
 
     """
+    Using Threads instead of Multiprocessing for now
     Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
     The multiprocessing isn't too important as it is not time limiting on GTX 1080
     On weaker computer it may cause the video processing to run behind
