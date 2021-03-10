@@ -296,16 +296,16 @@ def draw_bounding_boxes_on_image(image,model):
     return display_masked_image(image.copy(), bound_boxes.copy(), display=False), contours
 
 
-def draw_bounding_boxes_on_image_2(model, ct, frame, width = 512, height = 256):
+def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, width = 512, height = 256):
 
     rects = []
     car_past_direction = {}
-    frame = cv2.resize(frame, (width, height))
-    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    image_transforms = transforms.Compose([transforms.Resize((height, width)), transforms.ToTensor()])
-    t_image = image_transforms(Image.fromarray(img))
+    # frame = cv2.resize(frame, (width, height))
+    # img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # image_transforms = transforms.Compose([transforms.Resize((height, width)), transforms.ToTensor()])
+    # t_image = image_transforms(Image.fromarray(img))
 
-    img_out, contours = draw_bounding_boxes_on_image(t_image, model)
+    _, contours = draw_bounding_boxes_on_image(t_image, model)
     for cnt in contours:
         # draw a bounding box surrounding the object so we can
         # visualize it

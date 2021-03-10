@@ -1,4 +1,4 @@
-from cv2 import VideoCapture, CAP_PROP_POS_MSEC, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread, imencode
+from cv2 import VideoCapture, CAP_PROP_POS_MSEC, imwrite, resize, cvtColor, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread, imencode
 import os
 from os import path
 from pathlib import Path
@@ -151,7 +151,9 @@ def image_extraction_to_file(video_path, image_per_second=10, target_height=256,
         if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
             last_frame_time = video.get(CAP_PROP_POS_MSEC)
             image = resize(image, scale)
-            image_name = image_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_count))
+            image_name = image_path / \
+                (video_name.__str__() +
+                 "_frame_{:08d}.jpg".format(frame_count))
             imwrite(image_name.__str__(), image)
 
         frame_count += 1
@@ -169,7 +171,9 @@ def image_extraction_to_file(video_path, image_per_second=10, target_height=256,
 """
 Extracts frames from the video at a selected frame rate saves images to queue
 """
-def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512, frame_count = 0):
+
+
+def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512, frame_count=0):
     """
     Checks validity of provided video file path
     """
@@ -191,10 +195,12 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     """
 
     scale = (target_width, target_height)
+    image_transforms = transforms.Compose(
+        [transforms.Resize((target_height, target_width)), transforms.ToTensor()])
     last_frame_time = -10000000
     while True:
 
-        valid, image = video.read()
+        valid, frame = video.read()
 
         if not valid:
             # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
@@ -202,17 +208,16 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
 
         if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
             last_frame_time = video.get(CAP_PROP_POS_MSEC)
-            image = resize(image, scale)
-            frame_queue.put((frame_count, image))
+            frame = cv2.resize(frame, scale)
+            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            t_image = image_transforms(Image.fromarray(img))
+            frame_queue.put((frame_count, frame, t_image))
 
         frame_count += 1
 
     video.release()
 
     return frame_count
-
-
-
 
 
 def run_model_on_file(model, image_path, target_height=256, target_width=512, start_frame=0):
@@ -250,12 +255,12 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
     return processed_path
 
 
-def run_model_on_queue(model, ct, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
+def run_model_on_queue(model, ct, frame_queue, processed_queue):
     begin = time.time()
-    
+
     while frame_queue.empty() is False:
-        frame_num, img = frame_queue.get()
-        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
+        frame_num, frame, t_image = frame_queue.get()
+        img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image)
         processed_queue.put((frame_num, img_out))
 
     end = time.time()
@@ -270,7 +275,7 @@ Generates video from images in given file
 """
 
 
-def make_video(image_path, size = (512, 256), fps = 10):
+def make_video(image_path, size=(512, 256), fps=10):
 
     current_path = Path.cwd()
 
@@ -302,8 +307,8 @@ def make_video(image_path, size = (512, 256), fps = 10):
     return save_path
 
 
-def make_video_from_queue(video_name, processed_queue, size = (512, 256), fps = 10):
-    
+def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
+
     current_path = Path.cwd()
 
     images = []
