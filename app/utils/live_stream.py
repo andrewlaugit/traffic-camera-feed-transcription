@@ -6,7 +6,7 @@ import requests
 import queue
 from urllib.parse import urlparse
 from app.utils.car_detection import *
-from app.utils.imageextraction import image_extraction_to_queue, run_model_on_queue, video_details, check_file_path
+from app.utils.imageextraction import image_extraction_to_queue, run_model_on_queue
 from app.utils.centroidtracker import *
 
 
