@@ -76,7 +76,7 @@ def get_stream(segment_url, file_save_path):
         print("ERROR", request.status_code)
     return segment_url
 
-def get_stream_and_frames(url, frame_queue):
+def get_stream_and_frames(url, frame_queue, target_fps = 10):
     segments = queue.Queue()
     segment_urls = queue.Queue()
     all_segments = []
@@ -103,7 +103,7 @@ def get_stream_and_frames(url, frame_queue):
         if segment_urls.empty() is False:
             save_path = get_file_path(url)
             get_stream(segment_urls.get(), save_path)
-            total_frames += image_extraction_to_queue(save_path, frame_queue, frame_count = total_frames)
+            total_frames += image_extraction_to_queue(save_path, frame_queue, frame_count = total_frames, image_per_second = target_fps)
         else:
             time.sleep(1)
     

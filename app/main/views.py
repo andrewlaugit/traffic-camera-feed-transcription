@@ -119,12 +119,14 @@ def video_feed():
     if(session["url"] == None):
         return None
 
+    target_fps = 20
+
     """
     Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
     """
     frame_queue = queue.Queue()
 
-    sf = threading.Thread(target=get_stream_and_frames, args=(session["url"], frame_queue,), daemon=True)
+    sf = threading.Thread(target=get_stream_and_frames, args=(session["url"], frame_queue, target_fps,), daemon=True)
     sf.start()
 
     """
@@ -137,24 +139,19 @@ def video_feed():
     rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue,), daemon=True)
     rm.start()
 
-    """
-    Change gen_frames function to only draw from priorty queue
-    """
+    return Response(gen_frames(processed_queue, target_fps), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    return Response(gen_frames(processed_queue), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-def gen_frames(processed_queue):  # generate frame by frame from camera
+def gen_frames(processed_queue, target_fps):  # generate frame by frame from camera
 
     """
     Initialize first video segment and camera feed
     """
-    target_fps = 10
     last_frame_shown_time = time.time()
     while True:
         _, frame = processed_queue.get()
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
-        while(time.time() - last_frame_shown_time < (1/target_fps)):
+        while(time.time() - last_frame_shown_time < (1 / target_fps)):
             time.sleep((1/(target_fps*4)))
 
         last_frame_shown_time = time.time()
