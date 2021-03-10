@@ -76,20 +76,6 @@ def get_stream(segment_url, file_save_path):
         print("ERROR", request.status_code)
     return segment_url
 
-
-def run_model_on_stream(model, image, ct, video_name="", frame_count=0, target_height=256, target_width=512, start_frame=0):
-    frame = image
-    image_transforms = transforms.Compose(
-        [transforms.Resize((target_height, target_width)), transforms.ToTensor()])
-    image = Image.fromarray(image)
-    r, g, b = image.split()
-    image = Image.merge("RGB", (b, g, r))
-    t_image = image_transforms(image)
-    img_out = draw_bounding_boxes_on_image_2(model, ct, frame)
-    # img_out = cv2.cvtColor(img_out*255, cv2.COLOR_BGR2RGB)
-
-    return img_out
-
 def get_stream_and_frames(url, frame_queue):
     segments = queue.Queue()
     segment_urls = queue.Queue()
@@ -123,10 +109,10 @@ def get_stream_and_frames(url, frame_queue):
     
 def run_model_on_queue_loop(frame_queue, processed_queue):
     model = load_saved_model()
-
+    ct = CentroidTracker()
     while True:
         if frame_queue.empty() is False:
-            run_model_on_queue(model, frame_queue, processed_queue)
+            run_model_on_queue(model, ct, frame_queue, processed_queue)
         else:
             time.sleep(1)
 

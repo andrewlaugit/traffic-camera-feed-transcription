@@ -250,9 +250,9 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
     return processed_path
 
 
-def run_model_on_queue(model, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
+def run_model_on_queue(model, ct, frame_queue, processed_queue, target_height=256, target_width=512, start_frame=0):
     begin = time.time()
-    ct = CentroidTracker()
+    
     while frame_queue.empty() is False:
         frame_num, img = frame_queue.get()
         img_out = draw_bounding_boxes_on_image_2(model, ct, img)

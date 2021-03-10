@@ -63,7 +63,8 @@ def run_model(file_name):
     video_path = Path.cwd() / "app" / "static" / "videos" / file_name
     image_extraction_to_queue(video_path.__str__(), frame_queue)
     model = load_saved_model()
-    run_model_on_queue(model, frame_queue, processed_queue)
+    ct = CentroidTracker()
+    run_model_on_queue(model, ct, frame_queue, processed_queue)
     make_video_from_queue(file_name, processed_queue, (512, 256), 10)
     return home()
 
@@ -78,7 +79,8 @@ def youtube_video():
         processed_queue = queue.Queue()
         image_extraction_to_queue(video_path.__str__(), frame_queue)
         model = load_saved_model()
-        run_model_on_queue(model, frame_queue, processed_queue)
+        ct = CentroidTracker()
+        run_model_on_queue(model, ct, frame_queue, processed_queue)
         make_video_from_queue(file_name.__str__(), processed_queue, (512, 256), 10)
         return home()
     else:  
