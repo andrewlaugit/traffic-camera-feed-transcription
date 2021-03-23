@@ -97,6 +97,9 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     """
     Checks validity of provided video file path
     """
+
+    start_time = time.time()
+
     if(check_file_path(video_path) == False):
         return False
 
@@ -164,6 +167,8 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
         frame_count += 1
 
     video.release()
+
+    print("Image Extraction Took:", time.time() - start_time, " seconds")
 
     return frame_count
 
