@@ -29,7 +29,7 @@ def uploaded_file():
         if file.is_file():
             uploaded_videos.append(file.name)
 
-    current_path = Path.cwd() / "app" / "static" / "generatedvideos"
+    current_path = Path.cwd() / "app" / "static" #/ "generatedvideos"
     folder_path = current_path.iterdir()
 
     for file in folder_path:
@@ -45,7 +45,7 @@ def upload():
     file_name = Path(file_name)
     print(file_name.suffix)
 
-    if(file_name.suffix != ".mp4" and file_name.suffix != ".mkv"):
+    if(file_name.suffix != ".mp4" and file_name.suffix != ".mkv" and file_name.suffix != ".avi"):
         flash("Wrong File Format. Upload Failed")
         return home()
 
@@ -53,7 +53,6 @@ def upload():
     current_path = Path(current_path)
     file_path = current_path / "app" / "static" / "videos" / file_name
     file.save(file_path.__str__())
-    # image_extraction(file_path.__str__())
     return home()
 
 @app.route('/runmodel/<file_name>')
@@ -61,12 +60,12 @@ def run_model(file_name):
     frame_queue = queue.Queue()
     processed_queue = queue.Queue()
     video_path = Path.cwd() / "app" / "static" / "videos" / file_name
-    image_extraction_to_queue(video_path.__str__(), frame_queue)
+    image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20)
     model = load_saved_model()
     ct = CentroidTracker()
     run_model_on_queue(model, ct, frame_queue, processed_queue)
-    make_video_from_queue(file_name, processed_queue, (512, 256), 10)
-    return home()
+    make_video_from_queue(file_name, processed_queue, (512, 256), 15)
+    return uploaded_file()
 
 @app.route('/youtube_video', methods=["GET", "POST"])
 def youtube_video():
@@ -88,7 +87,7 @@ def youtube_video():
 
 @app.route('/downloadfile/<file_name>')
 def download_file(file_name):
-    current_path = Path.cwd() / "app" / "static" / "generatedvideos"
+    current_path = Path.cwd() / "app" / "static"
     file_path = current_path / file_name
     return send_file(file_path.__str__(), as_attachment=True)
 

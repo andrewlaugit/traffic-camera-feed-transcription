@@ -194,6 +194,8 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     at intervals dictated by save_interal 
     """
 
+    actualFrames = 0
+
     scale = (target_width, target_height)
     image_transforms = transforms.Compose(
         [transforms.Resize((target_height, target_width)), transforms.ToTensor()])
@@ -212,10 +214,13 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             t_image = image_transforms(Image.fromarray(img))
             frame_queue.put((frame_count, frame, t_image))
+            actualFrames += 1
 
         frame_count += 1
 
     video.release()
+
+    print("Number of Frames extracted", actualFrames, "   Frame Count is", frame_count)
 
     return frame_count
 
@@ -279,7 +284,7 @@ def make_video(image_path, size=(512, 256), fps=10):
 
     current_path = Path.cwd()
 
-    save_path = current_path / "app" / "static" / "generatedvideos"
+    save_path = current_path / "app" / "static"
 
     images = []
     names = []
@@ -294,11 +299,11 @@ def make_video(image_path, size=(512, 256), fps=10):
     if not Path.is_dir(save_path):
         Path.mkdir(save_path)
 
-    video_name = image_path.stem + ".avi"
+    video_name = image_path.stem + ".mp4"
 
     save_path = save_path / video_name
 
-    codex = VideoWriter_fourcc(*'XVID')
+    codex = VideoWriter_fourcc(*'mp4v')
     writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
     for image in out:
         writer.write(image)
@@ -321,16 +326,16 @@ def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
 
     out = [x for _, x in sorted(zip(names, images))]
 
-    save_path = current_path / "app" / "static" / "generatedvideos"
+    save_path = current_path / "app" / "static" 
 
     if not Path.is_dir(save_path):
         Path.mkdir(save_path)
 
-    video_name = video_name + ".avi"
+    video_name = Path(video_name).stem + ".mp4"
 
     save_path = save_path / video_name
 
-    codex = VideoWriter_fourcc(*'XVID')
+    codex = VideoWriter_fourcc(*'mp4v')
     writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
 
     for image in out:
