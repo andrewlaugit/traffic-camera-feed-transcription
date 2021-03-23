@@ -8,6 +8,7 @@ from pytube import YouTube, Stream
 import requests
 import m3u8
 import queue
+from moviepy.editor import VideoFileClip
 from urllib.parse import urlparse
 from app.utils.car_detection import *
 
@@ -88,92 +89,11 @@ def video_details(video_path):
 
 
 """
-Extracts frames from the video at a selected frame rate saves images in folder
-"""
-
-
-def image_extraction_to_file(video_path, image_per_second=10, target_height=256, target_width=512):
-    """
-    Checks validity of provided video file path
-    """
-    if(check_file_path(video_path) == False):
-        return False
-
-    """
-    loads video
-    """
-    video = VideoCapture(video_path)
-
-    if not video.isOpened():
-        print("Unable to open file. Please ensure input video is either .AVI or .MKV")
-        return False
-
-    video_path = Path(video_path)
-
-    video_name = video_path.stem
-
-    """
-    gets working directory
-    """
-    current_path = Path.cwd()
-
-    """
-    ensures image folder exists in project root directory
-    """
-
-    image_path = current_path / "images"
-
-    if not Path.is_dir(image_path):
-        Path.mkdir(image_path)
-
-    image_path = image_path / video_name
-
-    if not Path.is_dir(image_path):
-        Path.mkdir(image_path)
-
-    begin = time.time()
-
-    """
-    iterates through loaded video and extracts frames
-    at intervals dictated by save_interal 
-    """
-
-    scale = (target_width, target_height)
-    last_frame_time = -10000000
-    frame_count = 0
-    while True:
-
-        valid, image = video.read()
-
-        if not valid:
-            break
-
-        if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
-            last_frame_time = video.get(CAP_PROP_POS_MSEC)
-            image = resize(image, scale)
-            image_name = image_path / \
-                (video_name.__str__() +
-                 "_frame_{:08d}.jpg".format(frame_count))
-            imwrite(image_name.__str__(), image)
-
-        frame_count += 1
-
-    end = time.time()
-
-    total_time = end - begin
-
-    video.release()
-
-    print("Total time to extract and save frames: ", total_time)
-    return image_path
-
-
-"""
 Extracts frames from the video at a selected frame rate saves images to queue
 """
 
 
-def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512, frame_count=0):
+def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, target_height=256, target_width=512, frame_count=0, save_images = "off"):
     """
     Checks validity of provided video file path
     """
@@ -189,38 +109,61 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
         print("Unable to open file. Please ensure input video is either .AVI or .MKV")
         return False
 
+    clip = VideoFileClip(video_path)
+    video_length = clip.duration
+    print("Video Length According to MOVIEPY: ", video_length)
+
     """
     iterates through loaded video and extracts frames
     at intervals dictated by save_interal 
     """
+    if save_images == "on":
+        video_path = Path(video_path)
 
-    actualFrames = 0
+        video_name = video_path.stem
+
+        """
+        gets working directory
+        """
+        current_path = Path.cwd()
+
+        """
+        ensures image folder exists in project root directory
+        """
+
+        image_path = current_path / "images"
+
+        if not Path.is_dir(image_path):
+            Path.mkdir(image_path)
+
+        image_path = image_path / video_name
+
+        if not Path.is_dir(image_path):
+            Path.mkdir(image_path)
 
     scale = (target_width, target_height)
     image_transforms = transforms.Compose(
         [transforms.Resize((target_height, target_width)), transforms.ToTensor()])
-    last_frame_time = -10000000
-    while True:
 
-        valid, frame = video.read()
+    time_inc = 1 / image_per_second
 
-        if not valid:
-            # print("END at Frame Count", frame_count, " With save Interval of", save_interval)
-            break
+    for vid_time in np.arange(0, video_length, time_inc):
 
-        if(video.get(CAP_PROP_POS_MSEC) - last_frame_time >= 1000 / image_per_second):
-            last_frame_time = video.get(CAP_PROP_POS_MSEC)
-            frame = cv2.resize(frame, scale)
-            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            t_image = image_transforms(Image.fromarray(img))
-            frame_queue.put((frame_count, frame, t_image))
-            actualFrames += 1
-
+        frame = clip.get_frame(vid_time)
+        frame = cv2.resize(frame, scale)
+        if frame.ndim != 3:
+            frame = np.expand_dims(frame, axis = 2)
+            frame = np.repeat(frame, 3, axis = 2)
+            print("Grayscale changed back to", frame.shape)
+        img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        t_image = image_transforms(Image.fromarray(img))
+        frame_queue.put((frame_count, img, t_image))
+        if save_images == "on":
+            image_name = image_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_count))
+            imwrite(image_name.__str__(), img)
         frame_count += 1
 
     video.release()
-
-    print("Number of Frames extracted", actualFrames, "   Frame Count is", frame_count)
 
     return frame_count
 
@@ -260,12 +203,12 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
     return processed_path
 
 
-def run_model_on_queue(model, ct, frame_queue, processed_queue):
+def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20):
     begin = time.time()
 
     while frame_queue.empty() is False:
         frame_num, frame, t_image = frame_queue.get()
-        img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image)
+        img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image, frame_num, fps)
         processed_queue.put((frame_num, img_out))
 
     end = time.time()

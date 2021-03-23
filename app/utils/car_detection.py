@@ -296,7 +296,7 @@ def draw_bounding_boxes_on_image(image,model):
     return display_masked_image(image.copy(), bound_boxes.copy(), display=False), contours
 
 
-def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, width = 512, height = 256):
+def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, count, fps, width = 512, height = 256):
 
     rects = []
     car_past_direction = {}
@@ -321,7 +321,7 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, width = 512, heigh
                 cv2.rectangle(frame, (startX, startY), (endX, endY),
                               (0, 255, 0), 1)
 
-    objects, object_direction, road_directions = ct.update(rects)
+    objects, object_direction,road_directions = ct.update(rects, count/fps)
     for (objectID, centroid) in objects.items():
         # draw both the ID of the object and the centroid of the
         # object on the output frame

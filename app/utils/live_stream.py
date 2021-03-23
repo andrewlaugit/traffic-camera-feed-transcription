@@ -105,16 +105,16 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10):
         if segment_urls.empty() is False:
             save_path = get_file_path(url)
             get_stream(segment_urls.get(), save_path)
-            total_frames += image_extraction_to_queue(save_path, frame_queue, target_height = size[1], target_width= size[0],frame_count = total_frames, image_per_second = target_fps)
+            total_frames = image_extraction_to_queue(save_path, frame_queue, target_height = size[1], target_width= size[0],frame_count = total_frames, image_per_second = target_fps)
         else:
             time.sleep(1)
     
-def run_model_on_queue_loop(frame_queue, processed_queue):
+def run_model_on_queue_loop(frame_queue, processed_queue, fps):
     model = load_saved_model()
     ct = CentroidTracker()
     while True:
         if frame_queue.empty() is False:
-            run_model_on_queue(model, ct, frame_queue, processed_queue)
+            run_model_on_queue(model, ct, frame_queue, processed_queue, fps = fps)
         else:
             time.sleep(1)
 

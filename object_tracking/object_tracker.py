@@ -2,14 +2,14 @@
 
 # import the necessary packages
 from tracker.centroidtracker import CentroidTracker
-from imutils.video import VideoStream
+# from imutils.video import VideoStream
 import numpy as np
 import argparse
-import imutils
+# import imutils
 import time
 import torch
 import cv2
-from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread
+from cv2 import VideoCapture, imwrite, resize, CAP_PROP_FRAME_COUNT, CAP_PROP_POS_MSEC, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, CAP_PROP_FPS, VideoWriter, VideoWriter_fourcc, imread
 from model import draw_bounding_boxes_on_image, TrafficCamera_Vgg
 from PIL import Image
 import torchvision
@@ -22,7 +22,8 @@ ct = CentroidTracker()
 
 # intialize the model
 model = TrafficCamera_Vgg()
-model.load_state_dict(torch.load("vgg_augmented_16_30_0.001_best",map_location=torch.device('cpu')))
+model.load_state_dict(torch.load("vgg_augmented_256p_v2_16_25_0.001_best",map_location=torch.device('cpu')))
+model.cuda()
 model.eval()
 
 # initialize the video stream and allow the camera sensor to warmup
@@ -39,8 +40,8 @@ Checks that the path goes to a file
 height = 256
 width = 512
 
-cap = cv2.VideoCapture('highwaycar.mp4')
-fps = cap.get(cv2.CAP_PROP_FPS)
+cap = cv2.VideoCapture('hwy-camera-944--9 (1).mp4')
+fps = 11
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 video = cv2.VideoWriter('video.avi', fourcc, fps,(width,height))
@@ -73,7 +74,7 @@ while cap.isOpened():
 				cv2.rectangle(frame, (startX, startY),(endX, endY),
 							  (0, 255, 0), 1)
 
-	objects, object_direction,road_directions = ct.update(rects, count/fps)
+	objects, object_direction,road_directions = ct.update(rects,  count / fps)
 	for (objectID, centroid) in objects.items():
 		# draw both the ID of the object and the centroid of the
 		# object on the output frame

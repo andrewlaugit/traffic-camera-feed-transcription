@@ -147,3 +147,8 @@ models/
 generatedvideos/
 VideoProcessing/int-camera-125--7.mp4
 *.mp4
+test.txt
+last30test.txt
+object_tracking/video.avi
+object_tracking/vgg_augmented_256p_v2_16_25_0.001_best
+object_tracking/video.avi

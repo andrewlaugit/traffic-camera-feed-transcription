@@ -24,7 +24,7 @@
         <ul>
             {% for video in video_download_list %}
                 <li><a href='{{ url_for("download_file", file_name=(video))}}'>{{ video }}</a>
-                <h1><a href='{{ url_for("play_video", file_name=(video))}}'>Play Video</a></h1>
+
 
                 </li>
             {% endfor %}
