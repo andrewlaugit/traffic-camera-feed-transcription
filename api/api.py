@@ -66,6 +66,47 @@ def api_analyze_recorded():
     # return convert_log_to_json_summary('last30{}'.format(data_save_name), num_directions)
     return convert_log_to_json_summary('last30_test_client.txt', num_directions)
 
+'''
+this code may not work!!!!!!!!!!!
+'''
+@app.route('/api/analyze_live', methods=['GET'])
+def api_analyze_livestream():
+    if 'live_url' in request.args:
+        url = request.args.get('live_url')
+    else:
+        return IOError("Missing livestream url in argument")
+
+    num_directions = 4
+    if 'num_directions' in request.args:
+        num_directions = int(request.args.get('num_directions'))
+    else:
+        return IOError("Missing number of directions in argument") 
+
+    analysis_time = 300
+    if 'analysis_time' in request.args:
+        num_directions = int(request.args.get('analysis_time'))
+
+    target_fps = 20
+
+    """
+    Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
+    """
+    frame_queue = queue.Queue()
+
+    sf = threading.Thread(target=get_stream_and_frames, args=(url, frame_queue, target_fps,), daemon=True)
+    sf.start()
+
+    """
+    Using Threads instead of Multiprocessing for now
+    Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
+    The multiprocessing isn't too important as it is not time limiting on GTX 1080
+    On weaker computer it may cause the video processing to run behind
+    """
+    processed_queue = queue.PriorityQueue()
+    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps,), daemon=True)
+    rm.start()
+    return convert_log_to_json_summary('last30test.txt', num_directions)
+
 def convert_log_to_json_summary(filename, num_directions):
     with open(filename) as reports_30_sec_file:
         time_dict = json.loads(reports_30_sec_file.read())
