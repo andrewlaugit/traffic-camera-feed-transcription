@@ -109,9 +109,13 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10):
         else:
             time.sleep(1)
     
-def run_model_on_queue_loop(frame_queue, processed_queue, fps):
+def run_model_on_queue_loop(frame_queue, processed_queue, fps, logfile_name=None):
     model = load_saved_model()
-    ct = CentroidTracker()
+    if logfile_name != None:
+        ct = CentroidTracker(file_name=logfile_name)
+    else:
+        ct = CentroidTracker()
+        
     while True:
         if frame_queue.empty() is False:
             run_model_on_queue(model, ct, frame_queue, processed_queue, fps = fps)

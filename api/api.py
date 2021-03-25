@@ -92,8 +92,11 @@ def api_analyze_livestream():
     Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
     """
     frame_queue = queue.Queue()
+   
+    data_save_name = 'live_'.join(filter(str.isalnum, url)) + '.txt'
 
-    sf = threading.Thread(target=get_stream_and_frames, args=(url, frame_queue, target_fps,), daemon=True)
+    sf = threading.Thread(target=get_stream_and_frames, args=(url, frame_queue, \
+                        target_fps, data_save_name, ), daemon=True)
     sf.start()
 
     """
@@ -103,7 +106,7 @@ def api_analyze_livestream():
     On weaker computer it may cause the video processing to run behind
     """
     processed_queue = queue.PriorityQueue()
-    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps,), daemon=True)
+    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, ), daemon=True)
     rm.start()
     return convert_log_to_json_summary('last30test.txt', num_directions)
 
