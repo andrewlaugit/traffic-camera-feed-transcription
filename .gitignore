@@ -150,3 +150,5 @@ test.txt
 last30test.txt
 object_tracking/video.avi
 object_tracking/vgg_augmented_256p_v2_16_25_0.001_best
+test_client/csv/*
+api/temp/*

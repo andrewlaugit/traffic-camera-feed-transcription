@@ -50,65 +50,62 @@ def api_analyze_recorded():
         return IOError("Missing number of directions in argument") 
 
     # save extracted data as file path without extensions and slashes
-    data_save_name = ''.join(filter(str.isalnum, video_path)) + '.txt'
+    data_save_name = 'temp\\' + ''.join(filter(str.isalnum, video_path)) + '.txt'
 
     # frame_queue = queue.Queue()
     # processed_queue = queue.Queue()
-    # image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "on")
+    # image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
     # model = load_saved_model()
     # ct = CentroidTracker(file_name=data_save_name)
     # run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20)
-    
-    # dont think we need this one
-    # make_video_from_queue(file_name, processed_queue, (512, 256), 20)
 
     # analyze 30 second reports from system
     # return convert_log_to_json_summary('last30{}'.format(data_save_name), num_directions)
-    return convert_log_to_json_summary('last30_test_client.txt', num_directions)
+    return convert_log_to_json_summary('temp\\last30_test.txt', num_directions)
 
 '''
 this code may not work!!!!!!!!!!!
 '''
-@app.route('/api/analyze_live', methods=['GET'])
-def api_analyze_livestream():
-    if 'live_url' in request.args:
-        url = request.args.get('live_url')
-    else:
-        return IOError("Missing livestream url in argument")
+# @app.route('/api/analyze_live', methods=['GET'])
+# def api_analyze_livestream():
+#     if 'live_url' in request.args:
+#         url = request.args.get('live_url')
+#     else:
+#         return IOError("Missing livestream url in argument")
 
-    num_directions = 4
-    if 'num_directions' in request.args:
-        num_directions = int(request.args.get('num_directions'))
-    else:
-        return IOError("Missing number of directions in argument") 
+#     num_directions = 4
+#     if 'num_directions' in request.args:
+#         num_directions = int(request.args.get('num_directions'))
+#     else:
+#         return IOError("Missing number of directions in argument") 
 
-    analysis_time = 300
-    if 'analysis_time' in request.args:
-        num_directions = int(request.args.get('analysis_time'))
+#     analysis_time = 300
+#     if 'analysis_time' in request.args:
+#         num_directions = int(request.args.get('analysis_time'))
 
-    target_fps = 20
+#     target_fps = 20
 
-    """
-    Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
-    """
-    frame_queue = queue.Queue()
+#     """
+#     Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
+#     """
+#     frame_queue = queue.Queue()
    
-    data_save_name = 'live_'.join(filter(str.isalnum, url)) + '.txt'
+#     sf = threading.Thread(target=get_stream_and_frames, args=(url, frame_queue, \
+#                         target_fps, ), daemon=True)
+#     sf.start()
 
-    sf = threading.Thread(target=get_stream_and_frames, args=(url, frame_queue, \
-                        target_fps, data_save_name, ), daemon=True)
-    sf.start()
+#     """
+#     Using Threads instead of Multiprocessing for now
+#     Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
+#     The multiprocessing isn't too important as it is not time limiting on GTX 1080
+#     On weaker computer it may cause the video processing to run behind
+#     """
+#     processed_queue = queue.PriorityQueue()
+#     data_save_name = 'temp\\live_' + ''.join(filter(str.isalnum, url)) + '.txt'
 
-    """
-    Using Threads instead of Multiprocessing for now
-    Make multiprocessing for running model on Frames (put into priorty queue sorted by frame number)
-    The multiprocessing isn't too important as it is not time limiting on GTX 1080
-    On weaker computer it may cause the video processing to run behind
-    """
-    processed_queue = queue.PriorityQueue()
-    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, ), daemon=True)
-    rm.start()
-    return convert_log_to_json_summary('last30test.txt', num_directions)
+#     rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, data_save_name, ), daemon=True)
+#     rm.start()
+#     return convert_log_to_json_summary('temp\\last30_test.txt', num_directions)
 
 def convert_log_to_json_summary(filename, num_directions):
     with open(filename) as reports_30_sec_file:
@@ -154,8 +151,12 @@ def convert_log_to_json_summary(filename, num_directions):
     vehicle_avgspeed_30 = np.array([vehicle_avgspeed_30[:, i] for i in direction_indices_used])
 
     vehicle_flow_per_min = (vehicle_counts_30 * 2)
-    avg_vehicle_flow_per_min = np.mean(vehicle_counts_30, axis=0) * 2
-    normalized_avgspeed_30 = np.around(vehicle_avgspeed_30 / vehicle_avgspeed_30.max(axis=0), decimals=4)
+    avg_vehicle_flow_per_min = np.mean(vehicle_flow_per_min, axis=1)
+
+    normalized_avgspeed_30 = []
+    max_avgspeeds = list(vehicle_avgspeed_30.max(axis=1))
+    for i_dir in range(num_directions):
+        normalized_avgspeed_30.append(np.around(vehicle_avgspeed_30[i_dir,:] / max_avgspeeds[i_dir], decimals=4))
 
     ret_dict = {}
     summary_dict = {}
@@ -171,13 +172,13 @@ def convert_log_to_json_summary(filename, num_directions):
     flow_per_minute_by_30_seconds = {}
     for i_dir in range(len(possible_directions)):
         flow_per_minute_by_30_seconds[possible_directions[i_dir]] = \
-            list(vehicle_flow_per_min[:, i_dir])
+            list(vehicle_flow_per_min[i_dir, :])
     ret_dict["flow_per_minute_by_30_seconds"] = flow_per_minute_by_30_seconds
 
     relative_speeds_by_30_seconds = {}
     for i_dir in range(len(possible_directions)):
         relative_speeds_by_30_seconds[possible_directions[i_dir]] = \
-            list(normalized_avgspeed_30[:, i_dir])
+            list(normalized_avgspeed_30[i_dir])
     ret_dict["relative_speeds_by_30_seconds"] = relative_speeds_by_30_seconds        
 
     return json.dumps(ret_dict, cls=NpEncoder)
