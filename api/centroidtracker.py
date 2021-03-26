@@ -37,12 +37,12 @@ class CentroidTracker():
         # object is allowed to be marked as "disappeared" until we
         # need to deregister the object from tracking
         self.maxDisappeared = maxDisappeared
-        self.file_name = file_name
-        self.last30_file_name = "last30"+file_name
+        self.file_name = "temp\\" + file_name
+        self.last30_file_name = "temp\\last30" + file_name
 
-        f = open(file_name, "w")
+        f = open(self.file_name, "w")
         f.close()
-        f = open("last30"+file_name, "w")
+        f = open(self.last30_file_name, "w")
         f.close()
 
 
