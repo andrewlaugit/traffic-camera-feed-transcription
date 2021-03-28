@@ -51,16 +51,19 @@ def api_analyze_recorded():
 
     # save extracted data as file path without extensions and slashes
     data_save_name = ''.join(filter(str.isalnum, video_path)) + '.txt'
+    # video_name = ''.join(filter(str.isalnum, video_path))
 
     frame_queue = queue.Queue()
-    processed_queue = queue.Queue()
+    # processed_queue = queue.Queue()
     image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
     model = load_saved_model()
     ct = CentroidTracker(file_name=data_save_name)
-    run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20)
+    # run_model_on_queue(model, ct, frame_queue, processed_queue,fps = 20)
+    run_model_on_queue(model, ct, frame_queue, fps = 20)
+    # make_video_from_queue(video_name, processed_queue, fps=20)
 
     # analyze 30 second reports from system
-    return convert_log_to_json_summary('last30{}'.format(data_save_name), num_directions)
+    return convert_log_to_json_summary('temp\\last30{}'.format(data_save_name), num_directions)
     # return convert_log_to_json_summary('temp\\last30_test.txt', num_directions)
 
 '''
