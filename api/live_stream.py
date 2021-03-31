@@ -58,19 +58,11 @@ def get_base_url(url):
 
 
 def get_stream(segment_url, file_save_path):
-
-    # chunk_count = 0
     request = requests.get(segment_url, stream=True)
     if(request.status_code == 200):
         with open(file_save_path, 'wb') as file:
             for chunk in request.iter_content(chunk_size=1024):
-                # chunk_count += 1
-                # print(chunk_count)
                 file.write(chunk)
-                # if chunk_count > 1024:
-                #     print(
-                #         'File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
-                #     break
         file.close()
     else:
         print("ERROR", request.status_code)

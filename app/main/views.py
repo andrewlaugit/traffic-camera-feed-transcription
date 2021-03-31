@@ -60,10 +60,10 @@ def run_model(file_name):
     frame_queue = queue.Queue()
     processed_queue = queue.Queue()
     video_path = Path.cwd() / "app" / "static" / "videos" / file_name
-    image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
+    image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "on")
     model = load_saved_model()
     ct = CentroidTracker()
-    run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20)
+    run_model_on_queue(model, ct, frame_queue, processed_queue, video_path=video_path, fps = 20, save_images="on")
     make_video_from_queue(file_name, processed_queue, (512, 256), 20)
     return uploaded_file()
 

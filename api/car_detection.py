@@ -310,7 +310,7 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, count, fps, width 
         # visualize it
         (startX, startY, endX, endY) = cv2.boundingRect(cnt)
         # if cv2.contourArea(cnt) > 0.6 * endX * endY and
-        if cv2.contourArea(cnt) > 150:
+        if cv2.contourArea(cnt) > 150: ###### Change number the abjust box filter size
             # if cv2.contourArea(cnt) > 50:
             endX = startX + endX
             endY = startY + endY
@@ -320,81 +320,83 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, count, fps, width 
                 cv2.rectangle(frame, (startX, startY), (endX, endY),
                               (0, 255, 0), 1)
 
-    objects, object_direction,road_directions = ct.update(rects, count/fps)
-    for (objectID, centroid) in objects.items():
-        # draw both the ID of the object and the centroid of the
-        # object on the output frame
-        text = "Car {}".format(objectID)
-        cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0, 255, 0), 1)
-        cv2.circle(frame, (centroid[0], centroid[1]), 1, (0, 255, 0), 1)
 
-        if object_direction[objectID] != 0:
-            cv2.arrowedLine(frame, (centroid[0], centroid[1]), (centroid[0]+object_direction[objectID][0], centroid[1]+object_direction[objectID][1]),
-                            (255, 0, 0), 1, tipLength=0.5)
-            if objectID not in car_past_direction:
-                car_past_direction[objectID] = []
+    ct.update(rects, count / fps)
+    # objects, object_direction,road_directions = ct.update(rects, count/fps)
+    # for (objectID, centroid) in objects.items():
+    #     # draw both the ID of the object and the centroid of the
+    #     # object on the output frame
+    #     text = "Car {}".format(objectID)
+    #     cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0, 255, 0), 1)
+    #     cv2.circle(frame, (centroid[0], centroid[1]), 1, (0, 255, 0), 1)
 
-        # img_out = np.transpose(img_out, (2, 0, 1))
-    # plt.imshow(img_out)
-    # plt.show()
-    frame = cv2.resize(frame, (width, height))
+    #     if object_direction[objectID] != 0:
+    #         cv2.arrowedLine(frame, (centroid[0], centroid[1]), (centroid[0]+object_direction[objectID][0], centroid[1]+object_direction[objectID][1]),
+    #                         (255, 0, 0), 1, tipLength=0.5)
+    #         if objectID not in car_past_direction:
+    #             car_past_direction[objectID] = []
 
-    total_num_of_car = ct.numberOfObjects()
-    totalCarText = "Total # of Cars: " + str(total_num_of_car)
-    currentCarText = "Current # of Cars: " + str(len(objects))
-    # cv2.putText(frame, totalCarText, (0, 255),
-    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    # cv2.putText(frame, currentCarText, (0, 235),
-    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    #     # img_out = np.transpose(img_out, (2, 0, 1))
+    # # plt.imshow(img_out)
+    # # plt.show()
+    # frame = cv2.resize(frame, (width, height))
 
-    trafficColor = (0, 255, 0)  # green
+    # total_num_of_car = ct.numberOfObjects()
+    # totalCarText = "Total # of Cars: " + str(total_num_of_car)
+    # currentCarText = "Current # of Cars: " + str(len(objects))
+    # # cv2.putText(frame, totalCarText, (0, 255),
+    # #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    # # cv2.putText(frame, currentCarText, (0, 235),
+    # #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
-    if (len(objects) > 10):  # Red
-        trafficColor = (0, 0, 255)
-    elif (len(objects) > 7):  # Orange
-        trafficColor = (0, 144, 255)
+    # trafficColor = (0, 255, 0)  # green
 
-    # Traffic Conditions
-    # cv2.putText(frame, "Traffic Condition", (400, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-    # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
+    # if (len(objects) > 10):  # Red
+    #     trafficColor = (0, 0, 255)
+    # elif (len(objects) > 7):  # Orange
+    #     trafficColor = (0, 144, 255)
 
-    cv2.rectangle(frame, (390, 180), (512, 256), (255, 255, 255), -1)
+    # # Traffic Conditions
+    # # cv2.putText(frame, "Traffic Condition", (400, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    # # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
+
+    # cv2.rectangle(frame, (390, 180), (512, 256), (255, 255, 255), -1)
     
-    if (len(road_directions) > 0):
-        cv2.putText(frame, "Direction", (400, 200),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    # if (len(road_directions) > 0):
+    #     cv2.putText(frame, "Direction", (400, 200),
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
-        cv2.arrowedLine(frame, (480, 190),
-                        (480 + int(road_directions[0][0][0]*15),
-                            190 + int(road_directions[0][0][1]*15)),
-                        (255, 0, 0), 1, tipLength=0.5)
-        # print(road_directions[0][1])
-        cv2.putText(frame, str(int(
-            road_directions[0][1])), (495, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    #     cv2.arrowedLine(frame, (480, 190),
+    #                     (480 + int(road_directions[0][0][0]*15),
+    #                         190 + int(road_directions[0][0][1]*15)),
+    #                     (255, 0, 0), 1, tipLength=0.5)
+    #     # print(road_directions[0][1])
+    #     cv2.putText(frame, str(int(
+    #         road_directions[0][1])), (495, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
-        if (len(road_directions) > 1):
-            cv2.putText(frame, "Direction", (400, 230),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    #     if (len(road_directions) > 1):
+    #         cv2.putText(frame, "Direction", (400, 230),
+    #                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
-            cv2.arrowedLine(frame, (480, 220),
-                            (480 + int(road_directions[1][0][0] * 15),
-                                220 + int(road_directions[1][0][1] * 15)),
-                            (255, 0, 0), 1, tipLength=0.5)
-            cv2.putText(frame, str(
-                road_directions[1][1]), (495, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    #         cv2.arrowedLine(frame, (480, 220),
+    #                         (480 + int(road_directions[1][0][0] * 15),
+    #                             220 + int(road_directions[1][0][1] * 15)),
+    #                         (255, 0, 0), 1, tipLength=0.5)
+    #         cv2.putText(frame, str(
+    #             road_directions[1][1]), (495, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
-        if (len(road_directions) > 2):
-            cv2.putText(frame, "Direction", (400, 250),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    #     if (len(road_directions) > 2):
+    #         cv2.putText(frame, "Direction", (400, 250),
+    #                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
-            cv2.arrowedLine(frame, (480, 240),
-                            (480 + int(road_directions[2][0][0] * 15),
-                                240 + int(road_directions[2][0][1] * 15)),
-                            (255, 0, 0), 1, tipLength=0.5)
-            # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
-            cv2.putText(frame, str(
-                road_directions[2][1]), (495, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+    #         cv2.arrowedLine(frame, (480, 240),
+    #                         (480 + int(road_directions[2][0][0] * 15),
+    #                             240 + int(road_directions[2][0][1] * 15)),
+    #                         (255, 0, 0), 1, tipLength=0.5)
+    #         # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
+    #         cv2.putText(frame, str(
+    #             road_directions[2][1]), (495, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
     return frame
 # # example usage
 # image = Image.open(streets_dataset_filepath + '/images/Aptakisic at Bond IP East-9.jpg')

@@ -173,48 +173,28 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     return frame_count
 
 
-def run_model_on_file(model, image_path, target_height=256, target_width=512, start_frame=0):
-
-    current_path = Path.cwd()
-
-    processed_path = current_path / "processed_images"
-
-    if not Path.is_dir(processed_path):
-        Path.mkdir(processed_path)
-
-    video_name = image_path.stem
-
-    processed_path = processed_path / video_name
-
-    if not Path.is_dir(processed_path):
-        Path.mkdir(processed_path)
-
+def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20, video_path = "", save_images = "off"):
     begin = time.time()
 
-    ct = CentroidTracker()
-    for image_name in Path.iterdir(image_path):
-        image_name = image_name.name
-        img = imread((image_path / image_name).__str__())
-        img_out = draw_bounding_boxes_on_image_2(model, ct, img)
-        out_path = processed_path / ("Processed_" + image_name.__str__())
-        imwrite(out_path.__str__(), img_out)
+    video_name = Path(video_path).stem
 
-    end = time.time()
+    save_path = Path.cwd() / "processed_images"
 
-    total_time = end - begin
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
 
-    print("Time taken to process video frames:", total_time)
+    save_path = Path.cwd() / "processed_images" / video_name
 
-    return processed_path
-
-
-def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20):
-    begin = time.time()
+    if not Path.is_dir(save_path):
+        Path.mkdir(save_path)
 
     while frame_queue.empty() is False:
         frame_num, frame, t_image = frame_queue.get()
         img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image, frame_num, fps)
         processed_queue.put((frame_num, img_out))
+        if save_images == "on":
+            image_name = save_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_num))
+            imwrite(image_name.__str__(), img_out)
 
     end = time.time()
 
@@ -227,52 +207,9 @@ def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20):
 Generates video from images in given file
 """
 
-
-def make_video(image_path, size=(512, 256), fps=10):
-
-    current_path = Path.cwd()
-
-    save_path = current_path / "app" / "static"
-
-    images = []
-    names = []
-
-    for image in Path.iterdir(image_path):
-        names.append(image.stem)
-        img = imread(image.__str__())
-        images.append(img)
-
-    out = [x for _, x in sorted(zip(names, images))]
-
-    if not Path.is_dir(save_path):
-        Path.mkdir(save_path)
-
-    video_name = image_path.stem + ".mp4"
-
-    save_path = save_path / video_name
-
-    codex = VideoWriter_fourcc(*'mp4v')
-    writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
-    for image in out:
-        writer.write(image)
-    writer.release()
-
-    return save_path
-
-
 def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
 
     current_path = Path.cwd()
-
-    images = []
-    names = []
-
-    while processed_queue.empty() is False:
-        name, image = processed_queue.get()
-        names.append(name)
-        images.append(image)
-
-    out = [x for _, x in sorted(zip(names, images))]
 
     save_path = current_path / "app" / "static" 
 
@@ -286,7 +223,8 @@ def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
     codex = VideoWriter_fourcc(*'mp4v')
     writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
 
-    for image in out:
+    while processed_queue.empty() is False:
+        _, image = processed_queue.get()
         # cv2_imshow(image)
         writer.write(image)
     writer.release()

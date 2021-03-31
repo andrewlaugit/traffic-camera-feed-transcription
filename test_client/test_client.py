@@ -38,53 +38,53 @@ assert('success' in resp_dict.keys())
 
 # TEST 2: Check API can accept recorded highway video and provide traffic flow data
 paremeters_list = [
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\R11_011_2021_03_21_19-32-46.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-1189--11.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-1208--11.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-3356--4.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-camera-944--9.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-I-95 at Middletown Road.mp4",
+    #     "num_directions": 2
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-46--7.mp4",
+    #     "num_directions": 4
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-70--7.mp4",
+    #     "num_directions": 4
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-125--7.mp4",
+    #     "num_directions": 4
+    # },
     {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\5_6th_2021_01_27_17-22-20.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-1189--11.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-1208--11.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-3356--4.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-camera-944--9.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-I-95 at Middletown Road.mp4",
-        "num_directions": 2
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-46--7.mp4",
+        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-683--11.m4v",
         "num_directions": 4
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-70--7.mp4",
-        "num_directions": 4
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-125--7.mp4",
-        "num_directions": 4
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-683--11.mp4",
-        "num_directions": 4
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-NY 110 at Conklin St.mp4",
-        "num_directions": 4
-    },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-NY Routes 5, 8, 12_Burrstone Road Interchange- Utica.mp4",
-        "num_directions": 4
+    # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\BandW_hwy-camera-944--9 (1).mp4",
+    #     "num_directions": 2
+    # # },
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-NY Routes 5, 8, 12_Burrstone Road Interchange- Utica.mp4",
+    #     "num_directions": 4
     }
 ]
 

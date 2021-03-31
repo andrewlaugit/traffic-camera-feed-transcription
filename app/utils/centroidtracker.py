@@ -278,9 +278,10 @@ class CentroidTracker():
                         min_difference = abs(value[0]-key[0])+abs(value[1]-key[1])
                         direction = card_direction
 
-                last30_dict[direction]['count'] += item['count']
-                for speed in item['speed']:
-                    last30_dict[direction]['average_speed'] += speed
+                if direction != "":
+                    last30_dict[direction]['count'] += item['count']
+                    for speed in item['speed']:
+                        last30_dict[direction]['average_speed'] += speed
 
             for key, item in last30_dict.items():
                 if item['count'] >0:

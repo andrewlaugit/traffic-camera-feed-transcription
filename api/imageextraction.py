@@ -207,14 +207,12 @@ def run_model_on_file(model, image_path, target_height=256, target_width=512, st
 
     return processed_path
 
-
-def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20):
+def run_model_on_queue(model, ct, frame_queue, fps = 20):
     begin = time.time()
 
     while frame_queue.empty() is False:
         frame_num, frame, t_image = frame_queue.get()
         img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image, frame_num, fps)
-        processed_queue.put((frame_num, img_out))
 
     end = time.time()
 
@@ -267,18 +265,6 @@ def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
     images = []
     names = []
 
-    while processed_queue.empty() is False:
-        name, image = processed_queue.get()
-        names.append(name)
-        images.append(image)
-
-    out = [x for _, x in sorted(zip(names, images))]
-
-    save_path = current_path / "app" / "static" 
-
-    if not Path.is_dir(save_path):
-        Path.mkdir(save_path)
-
     video_name = Path(video_name).stem + ".mp4"
 
     save_path = save_path / video_name
@@ -286,8 +272,8 @@ def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
     codex = VideoWriter_fourcc(*'mp4v')
     writer = VideoWriter(save_path.__str__(), codex, fps, (size[0], size[1]))
 
-    for image in out:
-        # cv2_imshow(image)
+    while processed_queue.empty() is False:
+        _, image = processed_queue.get()
         writer.write(image)
     writer.release()
 
