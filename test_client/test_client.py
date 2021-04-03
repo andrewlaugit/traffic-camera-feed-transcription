@@ -27,20 +27,20 @@ def convert_to_csv(resp_dict, filename):
             writer.writerow(new_row)
 
 # TEST 1: Check API can connect and receive successfully
-resp = requests.get('http://127.0.0.2:5000/api/test')
-if resp.status_code != 200:
-    raise OSError('Error when testing API {}'.format(resp.status_code))
-resp_dict = json.loads(resp.content)
-print('Test Content: ', resp_dict)
-print('Test Response converted to ', type(resp_dict))
-# check success is returned
-assert('success' in resp_dict.keys())
+# resp = requests.get('http://127.0.0.1:5000/api/test')
+# if resp.status_code != 200:
+#     raise OSError('Error when testing API {}'.format(resp.status_code))
+# resp_dict = json.loads(resp.content)
+# print('Test Content: ', resp_dict)
+# print('Test Response converted to ', type(resp_dict))
+# # check success is returned
+# assert('success' in resp_dict.keys())
 
 # TEST 2: Check API can accept recorded highway video and provide traffic flow data
 paremeters_list = [
-    # {
-    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\R11_011_2021_03_21_19-32-46.mp4",
-    #     "num_directions": 2
+    {
+        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\R11_011_2021_03_21_19-32-46.mp4",
+        "num_directions": 2
     # },
     # {
     #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\hwy-cam-1189--11.mp4",
@@ -74,9 +74,9 @@ paremeters_list = [
     #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-125--7.mp4",
     #     "num_directions": 4
     # },
-    {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-683--11.m4v",
-        "num_directions": 8
+    # {
+    #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-683--11.m4v",
+    #     "num_directions": 8
     # },
     # {
     #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\BandW_hwy-camera-944--9 (1).mp4",
@@ -91,7 +91,7 @@ paremeters_list = [
 computation_times = []
 for parameters in paremeters_list:
     start = time.time()
-    resp = requests.get('http://127.0.0.2:5000/api/analyze_recorded', params=parameters)
+    resp = requests.get('http://127.0.0.1:5000/api/analyze_recorded', params=parameters)
     if resp.status_code != 200:
         raise OSError('Error when analyzing video {}'.format(resp.status_code))
     end = time.time()

@@ -192,22 +192,33 @@ def api_analyze_recorded():
     else:
         return IOError("Missing path in argument")
 
+    print("API video path is:", video_path)
+
     num_directions = 8
     if 'num_directions' in request.args:
         num_directions = int(request.args.get('num_directions'))
 
     # save extracted data as file path without extensions and slashes
-    data_save_name = ''.join(filter(str.isalnum, video_path)) + '.txt'
+    video_name = Path(video_path).stem
+    
+    data_save_name =video_name.__str__()
+    print("API video name is:", data_save_name)
 
     frame_queue = queue.Queue()
+    processed_queue = queue.Queue()
     image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
     model = load_saved_model()
-    ct = CentroidTracker(file_name=data_save_name)
-    run_model_on_queue(model, ct, frame_queue, fps = 20)
+    ct = CentroidTracker(save_file_name=data_save_name)
+    run_model_on_queue(model, ct, frame_queue, processed_queue ,fps = 20)
 
+    data_save_name = "last30_" + data_save_name + ".txt"
 
+    json_path = Path.cwd() / "app" / "static" / "reports" / data_save_name
+
+    print(json_path.__str__())
+    
     # analyze 30 second reports from system
-    return convert_log_to_json_summary('temp\\last30{}'.format(data_save_name), num_directions)
+    return convert_log_to_json_summary(json_path.__str__(), num_directions)
 
 
 @app.route('/api/get_summary/<video_name>', methods=['GET'])
@@ -217,8 +228,6 @@ def api_get_summary(video_name):
     file_name = "last30_" + video_name + ".txt"
 
     file_path = Path.cwd() / 'app' / 'static' / "reports" / file_name
-
-    # return jsonify({'name': file_name})
 
     return convert_log_to_json(file_path.__str__())
 
