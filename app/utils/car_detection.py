@@ -67,17 +67,6 @@ def display_masked_image(img, mask, display=True):
         plt.show()
     return res
 
-# def display_one_image_from_loader(loader):
-#     dataiter_train = iter(loader)
-#     images, targets = dataiter_train.next()
-
-#     images = images.numpy()[0]
-#     masks = targets.numpy()[0]
-#     display_masked_image(images, masks)
-
-# display_one_image_from_loader(train_loader)
-# display_one_image_from_loader(val_loader)
-# display_one_image_from_loader(test_loader)
 
 
 encode_out = []
@@ -179,14 +168,15 @@ def load_saved_model():
     num_epochs = 30
     learning_rate = 0.001
     model_save_name = 'vgg_augmented_256p_v2_16_25_0.001_best'
-    # model_save_name = 'vgg_augmented_16_30_0.001_best'
+
 
     models_filepath = Path.cwd() / "models" / model_save_name
 
     model.load_state_dict(torch.load(models_filepath.__str__()))
     model.eval()
 
-    model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     return model
 
@@ -300,19 +290,16 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, count, fps, width 
 
     rects = []
     car_past_direction = {}
-    # frame = cv2.resize(frame, (width, height))
-    # img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # image_transforms = transforms.Compose([transforms.Resize((height, width)), transforms.ToTensor()])
-    # t_image = image_transforms(Image.fromarray(img))
+
 
     _, contours = draw_bounding_boxes_on_image(t_image, model)
     for cnt in contours:
         # draw a bounding box surrounding the object so we can
         # visualize it
         (startX, startY, endX, endY) = cv2.boundingRect(cnt)
-        # if cv2.contourArea(cnt) > 0.6 * endX * endY and
+
         if cv2.contourArea(cnt) > 150:
-            # if cv2.contourArea(cnt) > 50:
+
             endX = startX + endX
             endY = startY + endY
             if (endX >= 0 and endX <= width and endY >= 0 and endY <= height and startX >= 0 and startX <= width and startY >= 0 and startY <= height):
@@ -336,70 +323,8 @@ def draw_bounding_boxes_on_image_2(model, ct, frame, t_image, count, fps, width 
             if objectID not in car_past_direction:
                 car_past_direction[objectID] = []
 
-        # img_out = np.transpose(img_out, (2, 0, 1))
-    # plt.imshow(img_out)
-    # plt.show()
+
     frame = cv2.resize(frame, (width, height))
 
-    total_num_of_car = ct.numberOfObjects()
-    totalCarText = "Total # of Cars: " + str(total_num_of_car)
-    currentCarText = "Current # of Cars: " + str(len(objects))
-    # cv2.putText(frame, totalCarText, (0, 255),
-    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-    # cv2.putText(frame, currentCarText, (0, 235),
-    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
-    trafficColor = (0, 255, 0)  # green
-
-    if (len(objects) > 10):  # Red
-        trafficColor = (0, 0, 255)
-    elif (len(objects) > 7):  # Orange
-        trafficColor = (0, 144, 255)
-
-    # Traffic Conditions
-    # cv2.putText(frame, "Traffic Condition", (400, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-    # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
-
-    cv2.rectangle(frame, (390, 180), (512, 256), (255, 255, 255), -1)
-    
-    if (len(road_directions) > 0):
-        cv2.putText(frame, "Direction", (400, 200),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-        cv2.arrowedLine(frame, (480, 190),
-                        (480 + int(road_directions[0][0][0]*15),
-                            190 + int(road_directions[0][0][1]*15)),
-                        (255, 0, 0), 1, tipLength=0.5)
-        # print(road_directions[0][1])
-        cv2.putText(frame, str(int(
-            road_directions[0][1])), (495, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-        if (len(road_directions) > 1):
-            cv2.putText(frame, "Direction", (400, 230),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-            cv2.arrowedLine(frame, (480, 220),
-                            (480 + int(road_directions[1][0][0] * 15),
-                                220 + int(road_directions[1][0][1] * 15)),
-                            (255, 0, 0), 1, tipLength=0.5)
-            cv2.putText(frame, str(
-                road_directions[1][1]), (495, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-        if (len(road_directions) > 2):
-            cv2.putText(frame, "Direction", (400, 250),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-            cv2.arrowedLine(frame, (480, 240),
-                            (480 + int(road_directions[2][0][0] * 15),
-                                240 + int(road_directions[2][0][1] * 15)),
-                            (255, 0, 0), 1, tipLength=0.5)
-            # cv2.rectangle(frame, (400, 230), (512, 255), trafficColor, -1)
-            cv2.putText(frame, str(
-                road_directions[2][1]), (495, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
     return frame
-# # example usage
-# image = Image.open(streets_dataset_filepath + '/images/Aptakisic at Bond IP East-9.jpg')
-# t_image = transform_image_for_model(image)
-# masked_image = draw_bounding_boxes_on_image(t_image)  # this function takes in 1 image and returns the same image with the bounding boxes
-# plt.imshow(masked_image)
-# plt.show()

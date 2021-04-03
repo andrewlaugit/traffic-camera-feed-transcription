@@ -76,7 +76,7 @@ paremeters_list = [
     # },
     {
         "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\int-camera-683--11.m4v",
-        "num_directions": 4
+        "num_directions": 8
     # },
     # {
     #     "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\test_videos\\BandW_hwy-camera-944--9 (1).mp4",

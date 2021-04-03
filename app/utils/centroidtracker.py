@@ -1,5 +1,6 @@
 from scipy.spatial import distance as dist
 from collections import OrderedDict
+from pathlib import Path
 import numpy as np
 from math import sqrt
 import json
@@ -17,7 +18,7 @@ card_directions = {
 
 
 class CentroidTracker():
-    def __init__(self, maxDisappeared=0, file_name="test.txt"):
+    def __init__(self, maxDisappeared=0, save_file_name="test.txt"):
         # initialize the next unique object ID along with two ordered
         # dictionaries used to keep track of mapping a given object
         # ID to its centroid and number of consecutive frames it has
@@ -37,12 +38,14 @@ class CentroidTracker():
         # object is allowed to be marked as "disappeared" until we
         # need to deregister the object from tracking
         self.maxDisappeared = maxDisappeared
-        self.file_name = file_name;
-        self.last30_file_name = "last30"+file_name;
+        save_path = Path.cwd() / "app" / "static" / "reports"
+        self.file_name = (save_path / save_file_name).__str__() + ".txt"
+        temp = "last30_" + save_file_name
+        self.last30_file_name = (save_path / temp).__str__() + ".txt"
 
-        f = open(file_name, "w")
+        f = open(self.file_name, "w")
         f.close()
-        f = open("last30"+file_name, "w")
+        f = open(self.last30_file_name, "w")
         f.close()
 
 
@@ -90,7 +93,7 @@ class CentroidTracker():
                 for direction in self.road_directions:
                     if (abs(direction[0][0]-average_direction[0]) < 0.3 and abs(direction[0][1]-average_direction[1]) < 0.3):
                         found = True
-                        break;
+                        break
                     index+=1
 
                 if (found!=True):

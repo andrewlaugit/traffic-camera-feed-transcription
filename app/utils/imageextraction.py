@@ -225,7 +225,6 @@ def make_video_from_queue(video_name, processed_queue, size=(512, 256), fps=10):
 
     while processed_queue.empty() is False:
         _, image = processed_queue.get()
-        # cv2_imshow(image)
         writer.write(image)
     writer.release()
 

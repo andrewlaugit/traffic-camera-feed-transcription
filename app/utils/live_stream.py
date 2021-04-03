@@ -58,28 +58,22 @@ def get_base_url(url):
 
 
 def get_stream(segment_url, file_save_path):
-
-    # chunk_count = 0
     request = requests.get(segment_url, stream=True)
     if(request.status_code == 200):
         with open(file_save_path, 'wb') as file:
             for chunk in request.iter_content(chunk_size=1024):
-                # chunk_count += 1
-                # print(chunk_count)
                 file.write(chunk)
-                # if chunk_count > 1024:
-                #     print(
-                #         'File Too Big (Greater than 1MB per .ts segment. Error Suspected. Ending.')
-                #     break
         file.close()
     else:
         print("ERROR", request.status_code)
     return segment_url
 
-def get_stream_and_frames(url, frame_queue, target_fps = 10):
+def get_stream_and_frames(url, frame_queue, target_fps = 10, run_time = 300):
     segments = queue.Queue()
     segment_urls = queue.Queue()
     all_segments = []
+
+    start_time = time.time()
 
     base_url = get_base_url(url)
 
@@ -88,6 +82,9 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10):
     total_frames = 0
 
     while True:
+        #forces function to exit after set time
+        if time.time() - start_time > run_time:
+            exit()
 
         if len(all_segments) > 10:
             all_segments.pop(0)
@@ -109,12 +106,21 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10):
         else:
             time.sleep(1)
     
-def run_model_on_queue_loop(frame_queue, processed_queue, fps):
+def run_model_on_queue_loop(frame_queue, processed_queue, fps, video_path="", run_time = 300,  save_images="off"):
+    start_time = time.time()
     model = load_saved_model()
-    ct = CentroidTracker()
+    if video_path != "":
+        video_name = video_path.stem
+        ct = CentroidTracker(save_file_name=video_name.__str__())
+    else:
+        ct = CentroidTracker()
     while True:
+        #forces function to exit after set time
+        if time.time() - start_time > run_time and frame_queue.empty() is True:
+            exit()
+
         if frame_queue.empty() is False:
-            run_model_on_queue(model, ct, frame_queue, processed_queue, fps = fps)
+            run_model_on_queue(model, ct, frame_queue, processed_queue, fps = fps, video_path=video_path, save_images=save_images)
         else:
             time.sleep(1)
 

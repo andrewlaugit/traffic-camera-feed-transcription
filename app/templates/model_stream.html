@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <head>
+        <title>Traffic Flow Analysis</title>
+        
+    </head>
+    <body>
+        
+        <img src="{{ url_for('run_model_stream') }}" width="100%">
+
+        <pre id="report"></pre>
+
+        <script>
+            cur_url = window.location.href;
+            
+            url_parts = cur_url.split("/");
+            video_file = url_parts[url_parts.length - 1];
+            video_file_parts = video_file.split(".");
+            video_name = video_file_parts[0];
+    
+            // var request = new XMLHttpRequest();
+
+            
+
+            setInterval(fetch_summary, 10000);
+
+            async function fetch_summary() {
+                api_url = "http://127.0.0.1:5000/api/get_summary/" + video_name; 
+                const response = await fetch(api_url);
+                const data = await response.json();
+                console.log(data);
+                document.getElementById("report").textContent = JSON.stringify(data, undefined, 2)
+
+            }
+
+            
+            
+        </script>
+
+    </body>
+
+
+
+{% endblock %}
