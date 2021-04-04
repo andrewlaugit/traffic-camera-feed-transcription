@@ -1,9 +1,9 @@
+from subprocess import run
 from flask import render_template, request, flash, redirect, send_file, request, Response, session, jsonify
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from app import app
 import queue
-# import json
 import threading
 from app.utils.imageextraction import *
 from app.utils.car_detection import *
@@ -27,9 +27,7 @@ def home():
     
     return render_template("home.html")
 
-##############################
-#  NEEDS TO BE FIXED #########
-##############################
+
 @app.route('/uploaded_file')
 def uploaded_file():
     uploaded_videos = []
@@ -41,7 +39,7 @@ def uploaded_file():
         if file.is_file():
             uploaded_videos.append(file.name)
 
-    current_path = Path.cwd() / "app" / "static" #/ "generatedvideos"
+    current_path = Path.cwd() / "app" / "static"
     folder_path = current_path.iterdir()
 
     for file in folder_path:
@@ -152,10 +150,17 @@ def live_video_feed():
     On weaker computer it may cause the video processing to run behind
     """
     processed_queue = queue.PriorityQueue()
+
+    """
+    Fake path used as a filler as run_model_on_queue_loop expects a Path object to be passed in 
+    """
     fake_video_path = Path("livestream.mp4")
     rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, fake_video_path, run_time,), daemon=True)
     rm.start()
 
+    """
+    Returns a call to the gen_frames function which provides a stream of images to the webpage
+    """
     return Response(gen_frames(processed_queue, target_fps, run_time), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -235,6 +240,10 @@ def api_analyze_stream():
     if 'run_time' in request.args:
         run_time = int(request.args.get("run_time"))
 
+    if run_time < 30:
+        run_time = 30
+        print("Run Time Too Short Changed To 30 Seconds")
+
     image_per_second=20
     if 'fps' in request.args:
         image_per_second = int(request.args.get('fps'))
@@ -261,7 +270,6 @@ def api_analyze_stream():
 
     # analyze 30 second reports from system
     return convert_log_to_json_summary(json_path.__str__(), num_directions)
-    # return convert_log_to_json(json_path.__str__())
     
 
 

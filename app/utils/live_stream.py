@@ -4,6 +4,7 @@ import time
 import m3u8
 import requests
 import queue
+from moviepy.editor import VideoFileClip
 from urllib.parse import urlparse
 from app.utils.car_detection import *
 from app.utils.imageextraction import image_extraction_to_queue, run_model_on_queue
@@ -73,7 +74,7 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10, run_time = 300):
     segment_urls = queue.Queue()
     all_segments = []
 
-    start_time = time.time()
+    video_time = 0
 
     base_url = get_base_url(url)
 
@@ -83,7 +84,7 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10, run_time = 300):
 
     while True:
         #forces function to exit after set time
-        if time.time() - start_time > run_time:
+        if video_time > run_time:
             exit()
 
         if len(all_segments) > 10:
@@ -102,6 +103,7 @@ def get_stream_and_frames(url, frame_queue, target_fps = 10, run_time = 300):
         if segment_urls.empty() is False:
             save_path = get_file_path(url)
             get_stream(segment_urls.get(), save_path)
+            video_time = video_time + VideoFileClip(save_path).duration
             total_frames = image_extraction_to_queue(save_path, frame_queue, target_height = size[1], target_width= size[0],frame_count = total_frames, image_per_second = target_fps)
         else:
             time.sleep(1)

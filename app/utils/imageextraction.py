@@ -106,12 +106,6 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
     """
     loads video
     """
-    video = VideoCapture(video_path)
-
-    if not video.isOpened():
-        print("Unable to open file. Please ensure input video is either .AVI or .MKV")
-        return False
-
     clip = VideoFileClip(video_path)
     video_length = clip.duration
     print("Video Length According to MOVIEPY: ", video_length)
@@ -165,8 +159,6 @@ def image_extraction_to_queue(video_path, frame_queue, image_per_second=10, targ
             image_name = image_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_count))
             imwrite(image_name.__str__(), img)
         frame_count += 1
-
-    video.release()
 
     print("Image Extraction Took:", time.time() - start_time, " seconds")
 
