@@ -135,6 +135,16 @@ def live_video_feed():
     target_fps = 20
     run_time = 60
 
+    check_path = Path.cwd() / "app" / "static" / "reports" / "livestream.txt"
+
+    if check_path.exists():
+        check_path.unlink()
+
+    check_path = Path.cwd() / "app" / "static" / "reports" / "last30_livestream.txt"
+
+    if check_path.exists():
+        check_path.unlink()
+
     """
     Make single thread for segment downloads and frame extraction (to queue as pair with frame number)
     """
@@ -229,6 +239,16 @@ def api_analyze_stream():
         stream_url = request.args.get('live_url')
     else:
         return IOError("Missing path in argument")
+
+    check_path = Path.cwd() / "app" / "static" / "reports" / "livestream.txt"
+
+    if check_path.exists():
+        check_path.unlink()
+
+    check_path = Path.cwd() / "app" / "static" / "reports" / "last30_livestream.txt"
+
+    if check_path.exists():
+        check_path.unlink()
 
     print("URL sent by API: ", stream_url)
 
