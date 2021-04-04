@@ -3,19 +3,43 @@
 {% block content %}
     <head>
         <title>Traffic Flow Analysis</title>
+        
     </head>
     <body>
-        <h1>Select Source For Video</h1>
-        <form action="/livestream" method="POST">
-            <input type="url" name="url" placeholder=".m3u8 URL">
-            <input type="submit" name="submit" value="Analyse Video">
-        </form>
-
-        <h1>Some Sources for Video Feeds</h1>
-        <a href="https://cwwp2.dot.ca.gov/vm/streamlist.htm" target="_blank">Caltrans :: Live Traffic Cameras - Individual Links</a>
-        <a href="https://fl511.com/cctv?start=0&length=10&order%5Bi%5D=1&order%5Bdir%5D=asc" target="_blank">Florida 511</a>  
-        <br>
+        
         <img src="{{ url_for('live_video_feed') }}" width="100%">
+
+        <pre id="report"></pre>
+
+        <script>
+            cur_url = window.location.href;
+            
+            url_parts = cur_url.split("/");
+            video_file = url_parts[url_parts.length - 1];
+            video_file_parts = video_file.split(".");
+            video_name = video_file_parts[0];
+    
+            // var request = new XMLHttpRequest();
+
+            
+
+            setInterval(fetch_summary, 5000);
+
+            async function fetch_summary() {
+                api_url = "http://127.0.0.1:5000/api/get_summary/" + video_name; 
+                const response = await fetch(api_url);
+                const data = await response.json();
+                console.log(data);
+                document.getElementById("report").textContent = JSON.stringify(data, undefined, 2)
+
+            }
+
+            
+            
+        </script>
+
     </body>
+
+
 
 {% endblock %}

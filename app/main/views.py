@@ -126,7 +126,7 @@ def live_stream():
         # get_stream(url)
         return render_template("live_stream.html")
     else:    
-        return render_template("live_stream.html")
+        return render_template("get_stream_url.html")
 
 @app.route('/live_video_feed')
 def live_video_feed():
@@ -152,7 +152,8 @@ def live_video_feed():
     On weaker computer it may cause the video processing to run behind
     """
     processed_queue = queue.PriorityQueue()
-    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, run_time,), daemon=True)
+    fake_video_path = Path("livestream.mp4")
+    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, target_fps, fake_video_path, run_time,), daemon=True)
     rm.start()
 
     return Response(gen_frames(processed_queue, target_fps, run_time), mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -192,7 +193,37 @@ def api_analyze_recorded():
     else:
         return IOError("Missing path in argument")
 
-    print("API video path is:", video_path)
+    num_directions = 8
+    if 'num_directions' in request.args:
+        num_directions = int(request.args.get('num_directions'))
+
+    # save extracted data as file path without extensions and slashes
+    video_path = Path(video_path)
+    video_name = video_path.stem
+
+    
+    data_save_name =video_name.__str__()
+
+    frame_queue = queue.Queue()
+    processed_queue = queue.Queue()
+    image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
+    model = load_saved_model()
+    ct = CentroidTracker(save_file_name=data_save_name)
+    run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20, video_path=video_path.__str__())
+
+    data_save_name = "last30_" + data_save_name + ".txt"
+
+    json_path = Path.cwd() / "app" / "static" / "reports" / data_save_name
+
+    # analyze 30 second reports from system
+    return convert_log_to_json_summary(json_path.__str__(), num_directions)
+
+@app.route('/api/analyze_stream', methods=['GET'])
+def api_analyze_stream():
+    if 'path' in request.args:
+        video_path = request.args.get('path')
+    else:
+        return IOError("Missing path in argument")
 
     num_directions = 8
     if 'num_directions' in request.args:
@@ -211,12 +242,12 @@ def api_analyze_recorded():
     ct = CentroidTracker(save_file_name=data_save_name)
     run_model_on_queue(model, ct, frame_queue, processed_queue ,fps = 20)
 
-    data_save_name = "last30_" + data_save_name + ".txt"
+    data_save_name = "last30_livestream.txt"
 
     json_path = Path.cwd() / "app" / "static" / "reports" / data_save_name
 
     print(json_path.__str__())
-    
+
     # analyze 30 second reports from system
     return convert_log_to_json_summary(json_path.__str__(), num_directions)
 
@@ -231,12 +262,21 @@ def api_get_summary(video_name):
 
     return convert_log_to_json(file_path.__str__())
 
+
+@app.route('/api/test', methods=['GET'])
+def api_test():
+    diction = {'success': True}
+    return jsonify(diction)
+
 def convert_log_to_json(filename):
+
+    size = Path(filename).stat().st_size
+    if size == 0:
+        return jsonify({'report_file_size': size})
+
     with open(filename) as reports_30_sec_file:
         time_dict = json.loads(reports_30_sec_file.read())
-    return time_dict
-
-    
+    return time_dict    
 
 
 def convert_log_to_json_summary(filename, num_directions = 8):
