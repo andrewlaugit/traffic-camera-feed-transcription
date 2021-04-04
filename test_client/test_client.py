@@ -27,14 +27,14 @@ def convert_to_csv(resp_dict, filename):
             writer.writerow(new_row)
 
 # TEST 1: Check API can connect and receive successfully
-# resp = requests.get('http://127.0.0.1:5000/api/test')
-# if resp.status_code != 200:
-#     raise OSError('Error when testing API {}'.format(resp.status_code))
-# resp_dict = json.loads(resp.content)
-# print('Test Content: ', resp_dict)
-# print('Test Response converted to ', type(resp_dict))
-# # check success is returned
-# assert('success' in resp_dict.keys())
+resp = requests.get('http://127.0.0.1:5000/api/test')
+if resp.status_code != 200:
+    raise OSError('Error when testing API {}'.format(resp.status_code))
+resp_dict = json.loads(resp.content)
+print('Test Content: ', resp_dict)
+print('Test Response converted to ', type(resp_dict))
+# check success is returned
+assert('success' in resp_dict.keys())
 
 # TEST 2: Check API can accept recorded highway video and provide traffic flow data
 paremeters_list = [
@@ -106,14 +106,15 @@ for parameters in paremeters_list:
 print(computation_times)
 
 # TEST 3: Check API can accept live video and provide traffic flow data
-# parameters = {
-#     "live_url": "C:\\Users\\AndrewLaptop\\hwy-cam-1189--11.mp4",
-#     "num_directions": 2,
-#     "analysis_time": 60
-# }
-# resp = requests.get('http://127.0.0.2:5000/api/analyze_live', params=parameters)
-# if resp.status_code != 200:
-#     raise OSError('Error when analyzing live video {}'.format(resp.status_code))
-# resp_dict = json.loads(resp.content)
-# print(resp_dict)
+parameters = {
+    "live_url": "https://35-d2.divas.cloud/CHAN-351/CHAN-351_1.stream/chunklist_w1962356171.m3u8",
+    "num_directions": 2,
+    "run_time": 20,
+    "fps": 20
+}
+resp = requests.get('http://127.0.0.1:5000/api/analyze_stream', params=parameters)
+if resp.status_code != 200:
+    raise OSError('Error when analyzing live video {}'.format(resp.status_code))
+resp_dict = json.loads(resp.content)
+print(resp_dict)
 
