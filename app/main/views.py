@@ -220,29 +220,40 @@ def api_analyze_recorded():
 
 @app.route('/api/analyze_stream', methods=['GET'])
 def api_analyze_stream():
-    if 'path' in request.args:
-        video_path = request.args.get('path')
+    if 'live_url' in request.args:
+        stream_url = request.args.get('live_url')
     else:
         return IOError("Missing path in argument")
+
+    print("URL sent by API: ", stream_url)
 
     num_directions = 8
     if 'num_directions' in request.args:
         num_directions = int(request.args.get('num_directions'))
 
+    run_time = 60
+    if 'run_time' in request.args:
+        run_time = int(request.args.get("run_time"))
+
+    image_per_second=20
+    if 'fps' in request.args:
+        image_per_second = int(request.args.get('fps'))
+
     # save extracted data as file path without extensions and slashes
-    video_name = Path(video_path).stem
-    
-    data_save_name =video_name.__str__()
-    print("API video name is:", data_save_name)
+    data_save_name = Path("livestream.txt")
 
     frame_queue = queue.Queue()
-    processed_queue = queue.Queue()
-    image_extraction_to_queue(video_path.__str__(), frame_queue, image_per_second=20, save_images = "off")
-    model = load_saved_model()
-    ct = CentroidTracker(save_file_name=data_save_name)
-    run_model_on_queue(model, ct, frame_queue, processed_queue ,fps = 20)
+    processed_queue = queue.PriorityQueue()
+    sf = threading.Thread(target = get_stream_and_frames, args=(stream_url, frame_queue, image_per_second, run_time,), daemon = True)
+    sf.start()
 
-    data_save_name = "last30_livestream.txt"
+    rm = threading.Thread(target=run_model_on_queue_loop, args=(frame_queue, processed_queue, image_per_second, data_save_name, run_time,), daemon=True)
+    rm.start()
+
+    sf.join()
+    rm.join()
+
+    data_save_name = Path("last30_livestream.txt")
 
     json_path = Path.cwd() / "app" / "static" / "reports" / data_save_name
 
@@ -250,6 +261,8 @@ def api_analyze_stream():
 
     # analyze 30 second reports from system
     return convert_log_to_json_summary(json_path.__str__(), num_directions)
+    # return convert_log_to_json(json_path.__str__())
+    
 
 
 @app.route('/api/get_summary/<video_name>', methods=['GET'])
@@ -280,6 +293,7 @@ def convert_log_to_json(filename):
 
 
 def convert_log_to_json_summary(filename, num_directions = 8):
+    print(filename)
     with open(filename) as reports_30_sec_file:
         time_dict = json.loads(reports_30_sec_file.read())
     time_list = [] 
