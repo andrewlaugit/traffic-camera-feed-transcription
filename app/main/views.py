@@ -311,7 +311,7 @@ def api_test():
 
 def convert_log_to_json(filename):
 
-    if Path(filename).exists is False:
+    if Path(filename).exists() is False:
         return jsonify({'report_file_size': "Nan"})
 
     size = Path(filename).stat().st_size
