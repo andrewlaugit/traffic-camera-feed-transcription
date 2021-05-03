@@ -11,5 +11,6 @@ Setup:
 1. Download Repo
 2. Install dependencies for requirements.txt (Custom installation of pytorch may be required)
 3. Run setup.py from the main directory
+4. Use command line command flask run to start server
 
 The flask server will now be running.
