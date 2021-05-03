@@ -9,7 +9,7 @@ the output data can be accessed through a web browser based interface at localho
 
 Setup:
 1. Download Repo
-2. Install dependencies for requirements.txt
+2. Install dependencies for requirements.txt (Custom installation of pytorch may be required)
 3. Run setup.py from the main directory
 
 The flask server will now be running.
