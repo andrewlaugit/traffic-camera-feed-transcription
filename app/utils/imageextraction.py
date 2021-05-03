@@ -182,7 +182,7 @@ def run_model_on_queue(model, ct, frame_queue, processed_queue, fps = 20, video_
 
     while frame_queue.empty() is False:
         frame_num, frame, t_image = frame_queue.get()
-        img_out = draw_bounding_boxes_on_image_2(model, ct, frame, t_image, frame_num, fps)
+        img_out = count_vehicles(model, ct, frame, t_image, frame_num, fps)
         processed_queue.put((frame_num, img_out))
         if save_images == "on":
             image_name = save_path / (video_name.__str__() + "_frame_{:08d}.jpg".format(frame_num))
