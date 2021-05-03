@@ -39,7 +39,7 @@ assert('success' in resp_dict.keys())
 # TEST 2: Check API can accept recorded highway video and provide traffic flow data
 parameters_list = [
     {
-        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\R11_011_2021_03_21_19-32-46.mp4",
+        "path": "C:\\Users\\Bob\\Desktop\\traffic-camera-feed-transcription\\app\\static\\videos\\int-camera-46--7.mp4",
         "num_directions": 2
     }
 ]
